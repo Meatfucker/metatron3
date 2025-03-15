@@ -1,0 +1,8 @@
+# Project exclude paths
+/venv/
+/metatron3.log
+/.idea
+/.git
+/configs/users/*
+/webhost/
+/users/
