@@ -5,6 +5,7 @@ from loguru import logger
 from modules.settings_loader import SettingsLoader
 from modules.avernus_client import AvernusClient
 from modules.llm_chat import LlmChat
+from modules.mtg_card import MTGCardGen, MTGCardGenThreePack
 
 class Metatron3(discord.Client):
     """Discord client for Metatron3"""
@@ -21,6 +22,16 @@ class Metatron3(discord.Client):
     async def setup_hook(self):
         """This loads the various shit before logging in to discord"""
         self.loop.create_task(self.process_request_queue())
+        self.slash_commands.add_command(discord.app_commands.Command(
+            name="mtg_gen",
+            description="This generates satire MTG cards",
+            callback=self.mtg_gen
+        ))
+        self.slash_commands.add_command(discord.app_commands.Command(
+            name="mtg_gen_three_pack",
+            description="This generates three satire MTG cards",
+            callback=self.mtg_gen_three_pack
+        ))
 
     async def on_message(self, message):
         """This captures people talking to the bot in chat and responds."""
@@ -65,3 +76,30 @@ class Metatron3(discord.Client):
             return False
         return True
 
+    async def mtg_gen(self, interaction: discord.Interaction, prompt: str):
+        """This is the slash command to generate a card."""
+
+        mtg_card_request = MTGCardGen(self, prompt, interaction.channel, interaction.user)
+
+        if await self.is_room_in_queue(interaction.user.id):
+            card_queue_logger = logger.bind(user=interaction.user.name, prompt=prompt)
+            card_queue_logger.info(f'Card Queued')
+            self.request_queue_concurrency_list[interaction.user.id] += 1
+            await self.request_queue.put(mtg_card_request)
+            await interaction.response.send_message('Card Being Created:', ephemeral=True, delete_after=5)
+        else:
+            await interaction.response.send_message("Queue limit reached, please wait until your current gen or gens finish")
+
+    async def mtg_gen_three_pack(self, interaction: discord.Interaction, prompt: str):
+        """This is the slash command to generate a card pack."""
+
+        mtg_card_request = MTGCardGenThreePack(self, prompt, interaction.channel, interaction.user)
+
+        if await self.is_room_in_queue(interaction.user.id):
+            card_queue_logger = logger.bind(user=interaction.user.name, prompt=prompt)
+            card_queue_logger.info(f'Card Pack Queued')
+            self.request_queue_concurrency_list[interaction.user.id] += 1
+            await self.request_queue.put(mtg_card_request)
+            await interaction.response.send_message('Pack Being Created:', ephemeral=True, delete_after=5)
+        else:
+            await interaction.response.send_message("Queue limit reached, please wait until your current gen or gens finish")

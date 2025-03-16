@@ -2,5 +2,6 @@
   "ip": "127.0.0.1",
   "port": "6969",
   "llm_model": "Goekdeniz-Guelmez/Josiefied-Qwen2.5-7B-Instruct-abliterated-v2",
-  "sdxl_model": "misri/zavychromaxl_v100"
+  "sdxl_model": "misri/zavychromaxl_v100",
+  "mtg_llm_model": "cognitivecomputations/Llama-3-8B-Instruct-abliterated-v2"
 }

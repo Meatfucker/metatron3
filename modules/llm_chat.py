@@ -31,9 +31,10 @@ class LlmChat:
                 chunk = response[i:i + 2000]
                 await self.channel.send(content=chunk, mention_author=True)
             generate_chat_logger = logger.bind(user=self.user, prompt=self.prompt)
-            generate_chat_logger.info("LLM SUCCESS")
+            generate_chat_logger.info("Chat Success")
         except Exception as e:
             logger.info(f"LLM FAILURE: {e}")
+
 
     async def add_history(self, role, content):
         """Adds each message to a JSON file named after the user's ID."""
