@@ -1,11 +1,13 @@
 import asyncio
 import re
 import discord
+from typing import Optional
 from loguru import logger
 from modules.settings_loader import SettingsLoader
 from modules.avernus_client import AvernusClient
 from modules.llm_chat import LlmChat
 from modules.mtg_card import MTGCardGen, MTGCardGenThreePack
+from modules.sdxl import SDXLGen
 
 
 # noinspection PyUnresolvedReferences
@@ -24,16 +26,7 @@ class Metatron3(discord.Client):
     async def setup_hook(self):
         """This loads the various shit before logging in to discord"""
         self.loop.create_task(self.process_request_queue())
-        self.slash_commands.add_command(discord.app_commands.Command(
-            name="mtg_gen",
-            description="This generates satire MTG cards",
-            callback=self.mtg_gen
-        ))
-        self.slash_commands.add_command(discord.app_commands.Command(
-            name="mtg_gen_three_pack",
-            description="This generates three satire MTG cards",
-            callback=self.mtg_gen_three_pack
-        ))
+        await self.register_slash_commands()
 
     async def on_message(self, message):
         """This captures people talking to the bot in chat and responds."""
@@ -78,6 +71,23 @@ class Metatron3(discord.Client):
             return False
         return True
 
+    async def register_slash_commands(self):
+        self.slash_commands.add_command(discord.app_commands.Command(
+            name="mtg_gen",
+            description="This generates satire MTG cards",
+            callback=self.mtg_gen
+        ))
+        self.slash_commands.add_command(discord.app_commands.Command(
+            name="mtg_gen_three_pack",
+            description="This generates three satire MTG cards",
+            callback=self.mtg_gen_three_pack
+        ))
+        self.slash_commands.add_command(discord.app_commands.Command(
+            name="sdxl_gen",
+            description="Generate an image using SDXL",
+            callback=self.sdxl_gen
+        ))
+
     async def mtg_gen(self, interaction: discord.Interaction, prompt: str):
         """This is the slash command to generate a card."""
 
@@ -105,3 +115,26 @@ class Metatron3(discord.Client):
             await interaction.response.send_message('Pack Being Created:', ephemeral=True, delete_after=5)
         else:
             await interaction.response.send_message("Queue limit reached, please wait until your current gen or gens finish")
+
+    async def sdxl_gen(self, interaction: discord.Interaction, prompt: str, negative_prompt: Optional[str],
+                       width: Optional[int], height: Optional[int], batch_size: Optional[int], lora_name: Optional[str]):
+        """This is the slash command to generate SDXL images"""
+        sdxl_request = SDXLGen(self,
+                               prompt,
+                               interaction.channel,
+                               interaction.user,
+                               negative_prompt=negative_prompt,
+                               width=width,
+                               height=height,
+                               batch_size=batch_size,
+                               lora_name=lora_name)
+
+        if await self.is_room_in_queue(interaction.user.id):
+            sdxl_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
+            sdxl_queuelogger.info("SDXL Queued")
+            self.request_queue_concurrency_list[interaction.user.id] += 1
+            await self.request_queue.put(sdxl_request)
+            await interaction.response.send_message("SDXL Image Being Created:", ephemeral=True, delete_after=5)
+        else:
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish")

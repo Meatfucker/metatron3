@@ -622,7 +622,7 @@ class MTGCardGenThreePack(MTGCardGen):
         message_link = f"https://discord.com/channels/{message.guild.id}/{message.channel.id}/{message.id}"
         lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt, link=message_link)
         lightycard_logger.info("Card Pack Success")
-    @logger.catch
+
     async def make_card(self):
         try:
             self.card_primary_mana = random.choice(range(1, 5))
