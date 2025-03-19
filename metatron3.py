@@ -4,16 +4,20 @@ from modules.logger import setup_logger
 from modules.settings_loader import SettingsLoader
 from modules.discord_client import Metatron3
 from modules.avernus_client import AvernusClient
+from modules.twitch_client import TwitchEventSubClient
 
 logger = setup_logger("metatron3.log")
 settings = SettingsLoader("configs")
-avernus_client = AvernusClient(settings["avernus"]["ip"], settings["avernus"]["port"])
+avernus_client = AvernusClient()
 discord_client = Metatron3(avernus_client=avernus_client, intents=discord.Intents.all())
+twitch_client = TwitchEventSubClient(discord_client=discord_client)
+
 
 async def start_clients():
     """Spin off clients to threads and start them"""
     await asyncio.gather(
-        discord_client.start(settings["discord"]["token"])  # Start the discord client
+        discord_client.start(settings["discord"]["token"]),  # Start the discord client
+        twitch_client.start()
         )
 
 def run_program():

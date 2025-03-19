@@ -1,5 +1,5 @@
 {
-  "token": "YourTokenHere",
+  "token": "YourDiscordTokenHere",
   "max_user_queue": 3,
   "max_user_history_messages": 20
 }

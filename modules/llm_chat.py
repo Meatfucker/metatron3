@@ -30,7 +30,7 @@ class LlmChat:
             for i in range(0, len(response), 2000):
                 chunk = response[i:i + 2000]
                 await self.channel.send(content=chunk, mention_author=True)
-            generate_chat_logger = logger.bind(user=self.user, prompt=self.prompt)
+            generate_chat_logger = logger.bind(user=self.user)
             generate_chat_logger.info("Chat Success")
         except Exception as e:
             logger.info(f"LLM FAILURE: {e}")
@@ -44,12 +44,16 @@ class LlmChat:
                 try:
                     history = json.load(file)
                 except json.JSONDecodeError:
-                    history = []
+                    history = {"history": []}
         else:
-            history = []
+            history = {"history": []}
 
-        history.append({"role": role, "content": content})
-        history = history[-self.settings["discord"]["max_user_history_messages"]:]
+        if "history" not in history:
+            history["history"] = []
+
+        history["history"].append({"role": role, "content": content})
+
+        history["history"] = history["history"][-self.settings["discord"]["max_user_history_messages"]:]
         with open(history_file, "w", encoding="utf-8") as file:
             json.dump(history, file, ensure_ascii=False, indent=4)
 
@@ -62,7 +66,6 @@ class LlmChat:
                 except json.JSONDecodeError:
                     history = None
                 finally:
-                    return history
+                    return history.get("history", [])
         else:
-            history = None
-            return history
+            return None

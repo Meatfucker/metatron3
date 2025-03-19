@@ -1,0 +1,12 @@
+{
+    "token": "YourToken",
+    "client_id": "YourClientID",
+    "client_secret": "YourClientSecret",
+    "channel_name": "Channel Name to Watch",
+    "channel_id": "Channel ID to watch",
+    "channel_token": "Channel Token",
+    "refresh_token": "Channel Refresh Token",
+    "reward_name": "Name of reward to watch for",
+    "token_expires_at": 1742354959,
+    "card_reward_channel": "Discord ID without quotes of channel to post cards to"
+}

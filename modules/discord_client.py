@@ -7,6 +7,8 @@ from modules.avernus_client import AvernusClient
 from modules.llm_chat import LlmChat
 from modules.mtg_card import MTGCardGen, MTGCardGenThreePack
 
+
+# noinspection PyUnresolvedReferences
 class Metatron3(discord.Client):
     """Discord client for Metatron3"""
     def __init__(self, *, avernus_client: AvernusClient, intents: discord.Intents):
@@ -41,7 +43,7 @@ class Metatron3(discord.Client):
                 self.request_queue_concurrency_list[message.author.id] += 1
                 chat_request = LlmChat(self, prompt, message.channel, message.author)
                 await self.request_queue.put(chat_request)
-                chat_logger = logger.bind(user=message.author, prompt=prompt)
+                chat_logger = logger.bind(user=message.author.name, prompt=prompt)
                 chat_logger.info("Chat Queued")
             else:
                 await message.channel.send("Queue limit has been reached, please wait for your previous gens to finish")

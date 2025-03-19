@@ -1,11 +1,13 @@
 import httpx
 from loguru import logger
+from modules.settings_loader import SettingsLoader
 
 class AvernusClient:
     """This is the client for the avernus API server"""
-    def __init__(self, url, port=6969):
-        self.url = url
-        self.port = port
+    def __init__(self):
+        self.settings = SettingsLoader("configs")
+        self.url = self.settings["avernus"]["ip"]
+        self.port = self.settings["avernus"]["port"]
         self.base_url = f"{self.url}:{self.port}"
 
     async def llm_chat(self, prompt, model_name=None, messages=None):
@@ -24,12 +26,14 @@ class AvernusClient:
             logger.info(f"EXCEPTION ERROR: {e}")
             return {"ERROR": str(e)}
 
-    async def sdxl_image(self, prompt, negative_prompt=None, model_name=None, width=1024, height=1024, steps=30,
+    async def sdxl_image(self, prompt, negative_prompt=None, model_name=None, lora_name=None, width=1024, height=1024,
+                         steps=30,
                          batch_size=4):
         url = f"http://{self.base_url}/sdxl_generate"
         data = {"prompt": prompt,
                 "negative_prompt": negative_prompt,
                 "model_name": model_name,
+                "lora_name": lora_name,
                 "width": width,
                 "height": height,
                 "steps": steps,

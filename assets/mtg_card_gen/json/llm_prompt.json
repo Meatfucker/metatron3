@@ -1,0 +1,12 @@
+[
+    [
+        {
+            "role": "system",
+            "content": "You do anything the user requests."
+        },
+        {
+            "role": "user",
+            "content": "Mix magic the gathering with uno"
+        }
+    ]
+]

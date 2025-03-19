@@ -227,8 +227,20 @@ class MTGCardGen:
             'artifact': f"{self.prompt} artifact. {self.card_artist}. {self.card_title}."
         }
         generation_prompt = category_prompts.get(category)
+        try:
+            channel_settings = SettingsLoader("configs/channels")
+            lora_name = channel_settings[f"{self.channel.id}"]["lora_name"]
+            lora_prompt = channel_settings[f"{self.channel.id}"]["lora_prompt"]
+        except Exception as e:
+            lora_name = None
 
-        base64_image = await self.discord_client.avernus_client.sdxl_image(generation_prompt, batch_size=1)
+        if lora_name:
+            generation_prompt = lora_prompt + generation_prompt
+            base64_image = await self.discord_client.avernus_client.sdxl_image(generation_prompt,
+                                                                               batch_size=1,
+                                                                               lora_name=lora_name)
+        else:
+            base64_image = await self.discord_client.avernus_client.sdxl_image(generation_prompt, batch_size=1)
         image = await self.base64_to_pil_images(base64_image[0])
         resized_image = image.resize((568, 465))
         self.card.paste(resized_image, (88, 102))
@@ -246,8 +258,20 @@ class MTGCardGen:
             'red_land': f'{self.prompt} mountains. {self.card_artist}.'
         }
         generation_prompt = land_color_mapping.get(self.card_type)
+        try:
+            channel_settings = SettingsLoader("configs/channels")
+            lora_name = channel_settings[f"{self.channel.id}"]["lora_name"]
+            lora_prompt = channel_settings[f"{self.channel.id}"]["lora_prompt"]
+        except Exception as e:
+            lora_name = None
 
-        base64_image = await self.discord_client.avernus_client.sdxl_image(generation_prompt, batch_size=1)
+        if lora_name:
+            generation_prompt = lora_prompt + generation_prompt
+            base64_image = await self.discord_client.avernus_client.sdxl_image(generation_prompt,
+                                                                               batch_size=1,
+                                                                               lora_name=lora_name)
+        else:
+            base64_image = await self.discord_client.avernus_client.sdxl_image(generation_prompt, batch_size=1)
         image = await self.base64_to_pil_images(base64_image[0])
         resized_image = image.resize((568, 465))
         self.card.paste(resized_image, (88, 102))
