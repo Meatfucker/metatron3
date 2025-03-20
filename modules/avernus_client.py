@@ -49,11 +49,10 @@ class AvernusClient:
             logger.info(f"ERROR: {e}")
             return {"ERROR": str(e)}
 
-    async def flux_image(self, prompt, negative_prompt=None, model_name=None, width=None, height=None, steps=None,
+    async def flux_image(self, prompt, model_name=None, width=None, height=None, steps=None,
                          batch_size=None):
         url = f"http://{self.base_url}/flux_generate"
         data = {"prompt": prompt,
-                "negative_prompt": negative_prompt,
                 "model_name": model_name,
                 "width": width,
                 "height": height,
