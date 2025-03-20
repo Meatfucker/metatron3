@@ -8,6 +8,7 @@ from modules.avernus_client import AvernusClient
 from modules.llm_chat import LlmChat
 from modules.mtg_card import MTGCardGen, MTGCardGenThreePack
 from modules.sdxl import SDXLGen
+from modules.flux import FluxGen
 
 
 # noinspection PyUnresolvedReferences
@@ -87,6 +88,11 @@ class Metatron3(discord.Client):
             description="Generate an image using SDXL",
             callback=self.sdxl_gen
         ))
+        self.slash_commands.add_command(discord.app_commands.Command(
+            name="flux_gen",
+            description="Generate an image using Flux",
+            callback=self.flux_gen
+        ))
 
     async def mtg_gen(self, interaction: discord.Interaction, prompt: str):
         """This is the slash command to generate a card."""
@@ -135,6 +141,28 @@ class Metatron3(discord.Client):
             self.request_queue_concurrency_list[interaction.user.id] += 1
             await self.request_queue.put(sdxl_request)
             await interaction.response.send_message("SDXL Image Being Created:", ephemeral=True, delete_after=5)
+        else:
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish")
+
+    async def flux_gen(self, interaction: discord.Interaction, prompt: str, width: Optional[int],
+                       height: Optional[int], batch_size: Optional[int], lora_name: Optional[str]):
+        """This is the slash command to generate Flux images"""
+        flux_request = FluxGen(self,
+                               prompt,
+                               interaction.channel,
+                               interaction.user,
+                               width=width,
+                               height=height,
+                               batch_size=batch_size,
+                               lora_name=lora_name)
+
+        if await self.is_room_in_queue(interaction.user.id):
+            flux_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
+            flux_queuelogger.info("Flux Queued")
+            self.request_queue_concurrency_list[interaction.user.id] += 1
+            await self.request_queue.put(flux_request)
+            await interaction.response.send_message("Flux Image Being Created:", ephemeral=True, delete_after=5)
         else:
             await interaction.response.send_message(
                 "Queue limit reached, please wait until your current gen or gens finish")
