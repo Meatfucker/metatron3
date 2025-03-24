@@ -31,16 +31,17 @@ class Metatron3(discord.Client):
 
     async def on_message(self, message):
         """This captures people talking to the bot in chat and responds."""
-        if self.user.mentioned_in(message):
-            prompt = re.sub(r'<[^>]+>', '', message.content).lstrip()
-            if await self.is_room_in_queue(message.author.id):
-                self.request_queue_concurrency_list[message.author.id] += 1
-                chat_request = LlmChat(self, prompt, message.channel, message.author)
-                await self.request_queue.put(chat_request)
-                chat_logger = logger.bind(user=message.author.name, prompt=prompt)
-                chat_logger.info("Chat Queued")
-            else:
-                await message.channel.send("Queue limit has been reached, please wait for your previous gens to finish")
+        if message.type != discord.MessageType.reply:
+            if self.user.mentioned_in(message):
+                prompt = re.sub(r'<[^>]+>', '', message.content).lstrip()
+                if await self.is_room_in_queue(message.author.id):
+                    self.request_queue_concurrency_list[message.author.id] += 1
+                    chat_request = LlmChat(self, prompt, message.channel, message.author)
+                    await self.request_queue.put(chat_request)
+                    chat_logger = logger.bind(user=message.author.name, prompt=prompt)
+                    chat_logger.info("Chat Queued")
+                else:
+                    await message.channel.send("Queue limit has been reached, please wait for your previous gens to finish")
 
     async def on_ready(self):
         """Prints the bots name to discord and syncs the slash commands"""
@@ -75,7 +76,7 @@ class Metatron3(discord.Client):
     async def register_slash_commands(self):
         self.slash_commands.add_command(discord.app_commands.Command(
             name="mtg_gen",
-            description="This generates satire MTG cards",
+            description="This generates a satire MTG card",
             callback=self.mtg_gen
         ))
         self.slash_commands.add_command(discord.app_commands.Command(
