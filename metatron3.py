@@ -10,15 +10,19 @@ logger = setup_logger("metatron3.log")
 settings = SettingsLoader("configs")
 avernus_client = AvernusClient()
 discord_client = Metatron3(avernus_client=avernus_client, intents=discord.Intents.all())
-twitch_client = TwitchEventSubClient(discord_client=discord_client)
+if settings["twitch"]["twitch_enabled"]:
+    twitch_client = TwitchEventSubClient(discord_client=discord_client)
 
 
 async def start_clients():
     """Spin off clients to threads and start them"""
-    await asyncio.gather(
-        discord_client.start(settings["discord"]["token"]),  # Start the discord client
-        twitch_client.start()
-        )
+    if settings["twitch"]["twitch_enabled"]:
+        await asyncio.gather(
+            discord_client.start(settings["discord"]["token"]),  # Start the discord client
+            twitch_client.start()
+            )
+    else:
+        await asyncio.gather(discord_client.start(settings["discord"]["token"]))
 
 def run_program():
     """Main startup loop"""

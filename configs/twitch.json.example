@@ -1,4 +1,5 @@
 {
+    "twitch_enabled": false,
     "token": "YourToken",
     "client_id": "YourClientID",
     "client_secret": "YourClientSecret",
