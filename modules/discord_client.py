@@ -135,7 +135,8 @@ class Metatron3(discord.Client):
             # Write back to the file
             with open(file_path, 'w') as file:
                 json.dump(user_data, file, indent=4)
-            await interaction.response.send_message(f'Ban toggled for user:{user_id}', ephemeral=True, delete_after=5)
+            await interaction.response.send_message(f'Ban toggled for user:{user_id} Banned:{user_data["banned"]}',
+                                                    ephemeral=True, delete_after=5)
         except Exception as e:
             logger.info(f"Ban exception: {e}")
 
