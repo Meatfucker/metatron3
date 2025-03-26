@@ -612,7 +612,8 @@ class MTGCardGenThreePack(MTGCardGen):
         card3.save(dir_path_3, format="WEBP")
         card3.save(card_path_3, format="WEBP")
 
-        message = await self.channel.send(f"# `{self.user}` [OPEN PACK](http://theblackgoat.net/cardflip-dynamic.html?username={self.user}&datetimestring={now_string})")
+        if self.settings["discord"]["mtg_gen_three_pack_send_link"]:
+            message = await self.channel.send(f"# `{self.user}` [OPEN PACK](http://theblackgoat.net/cardflip-dynamic.html?username={self.user}&datetimestring={now_string})")
         await self.channel.send(
             content=f"Card Pack for `{self.user}`: Prompt: `{self.prompt}`",
             files=[discord.File(dir_path_1, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True),

@@ -1,5 +1,6 @@
 {
   "token": "YourDiscordTokenHere",
   "max_user_queue": 3,
-  "max_user_history_messages": 20
+  "max_user_history_messages": 20,
+  "mtg_gen_three_pack_send_link": false
 }
