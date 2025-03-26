@@ -1,4 +1,6 @@
 import asyncio
+import json
+import os
 import re
 import discord
 from typing import Optional
@@ -67,13 +69,32 @@ class Metatron3(discord.Client):
     async def is_room_in_queue(self, user_id):
         """This checks the users current number of pending gens against the max,
          and if there is room, returns true, otherwise, false"""
+        if await self.is_user_banned(user_id):
+            return False
         self.request_queue_concurrency_list.setdefault(user_id, 0)
         user_queue_depth = self.settings["discord"]["max_user_queue"]
         if self.request_queue_concurrency_list[user_id] >= user_queue_depth:
             return False
         return True
 
+    async def is_user_banned(self, user_id):
+        """Checks the users config if they are banned and returns true if they are, else false"""
+        file_path = f"configs/users/{user_id}.json"
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as file:
+                try:
+                    user_data = json.load(file)
+                    return user_data.get("banned", False)  # Default to False if key is missing
+                except json.JSONDecodeError:  # Handle empty or corrupted files
+                    return False
+        return False  # Return False if file doesn't exist
+
     async def register_slash_commands(self):
+        self.slash_commands.add_command(discord.app_commands.Command(
+            name="toggle_user_ban",
+            description="Toggles whether a user is banned or not",
+            callback=self.toggle_user_ban
+        ))
         self.slash_commands.add_command(discord.app_commands.Command(
             name="mtg_gen",
             description="This generates a satire MTG card",
@@ -94,6 +115,29 @@ class Metatron3(discord.Client):
             description="Generate an image using Flux",
             callback=self.flux_gen
         ))
+
+    async def toggle_user_ban(self, interaction: discord.Interaction, user_id: str):
+        """Toggles the 'banned' setting for the user in their JSON file.
+        If the key exists, it flips its boolean value.
+        If it does not exist, it sets 'banned' to True."""
+        file_path = f"configs/users/{user_id}.json"
+        try:
+            if os.path.exists(file_path):
+                with open(file_path, 'r') as file:
+                    try:
+                        user_data = json.load(file)
+                    except json.JSONDecodeError:  # Handle empty or corrupted files
+                        user_data = {}
+            else:
+                user_data = {}
+            # Toggle or set the 'banned' key
+            user_data["banned"] = not user_data.get("banned", False)
+            # Write back to the file
+            with open(file_path, 'w') as file:
+                json.dump(user_data, file, indent=4)
+            await interaction.response.send_message(f'Ban toggled for user:{user_id}', ephemeral=True, delete_after=5)
+        except Exception as e:
+            logger.info(f"Ban exception: {e}")
 
     async def mtg_gen(self, interaction: discord.Interaction, prompt: str):
         """This is the slash command to generate a card."""
