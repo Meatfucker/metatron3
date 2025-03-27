@@ -9,8 +9,8 @@ from modules.settings_loader import SettingsLoader
 from modules.avernus_client import AvernusClient
 from modules.llm_chat import LlmChat
 from modules.mtg_card import MTGCardGen, MTGCardGenThreePack
-from modules.sdxl import SDXLGen
-from modules.flux import FluxGen
+from modules.sdxl import SDXLGen, SDXLGenEnhanced
+from modules.flux import FluxGen, FluxGenEnhanced
 
 
 # noinspection PyUnresolvedReferences
@@ -169,17 +169,29 @@ class Metatron3(discord.Client):
             await interaction.response.send_message("Queue limit reached, please wait until your current gen or gens finish")
 
     async def sdxl_gen(self, interaction: discord.Interaction, prompt: str, negative_prompt: Optional[str],
-                       width: Optional[int], height: Optional[int], batch_size: Optional[int], lora_name: Optional[str]):
+                       width: Optional[int], height: Optional[int], batch_size: Optional[int], lora_name: Optional[str],
+                       enhance_prompt: Optional[bool]):
         """This is the slash command to generate SDXL images"""
-        sdxl_request = SDXLGen(self,
-                               prompt,
-                               interaction.channel,
-                               interaction.user,
-                               negative_prompt=negative_prompt,
-                               width=width,
-                               height=height,
-                               batch_size=batch_size,
-                               lora_name=lora_name)
+        if enhance_prompt:
+            sdxl_request = SDXLGenEnhanced(self,
+                                           prompt,
+                                           interaction.channel,
+                                           interaction.user,
+                                           negative_prompt=negative_prompt,
+                                           width=width,
+                                           height=height,
+                                           batch_size=batch_size,
+                                           lora_name=lora_name)
+        else:
+            sdxl_request = SDXLGen(self,
+                                   prompt,
+                                   interaction.channel,
+                                   interaction.user,
+                                   negative_prompt=negative_prompt,
+                                   width=width,
+                                   height=height,
+                                   batch_size=batch_size,
+                                   lora_name=lora_name)
 
         if await self.is_room_in_queue(interaction.user.id):
             sdxl_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
@@ -192,16 +204,27 @@ class Metatron3(discord.Client):
                 "Queue limit reached, please wait until your current gen or gens finish")
 
     async def flux_gen(self, interaction: discord.Interaction, prompt: str, width: Optional[int],
-                       height: Optional[int], batch_size: Optional[int], lora_name: Optional[str]):
+                       height: Optional[int], batch_size: Optional[int], lora_name: Optional[str],
+                       enhance_prompt: Optional[bool]):
         """This is the slash command to generate Flux images"""
-        flux_request = FluxGen(self,
-                               prompt,
-                               interaction.channel,
-                               interaction.user,
-                               width=width,
-                               height=height,
-                               batch_size=batch_size,
-                               lora_name=lora_name)
+        if enhance_prompt:
+            flux_request = FluxGenEnhanced(self,
+                                           prompt,
+                                           interaction.channel,
+                                           interaction.user,
+                                           width=width,
+                                           height=height,
+                                           batch_size=batch_size,
+                                           lora_name=lora_name)
+        else:
+            flux_request = FluxGen(self,
+                                   prompt,
+                                   interaction.channel,
+                                   interaction.user,
+                                   width=width,
+                                   height=height,
+                                   batch_size=batch_size,
+                                   lora_name=lora_name)
 
         if await self.is_room_in_queue(interaction.user.id):
             flux_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)

@@ -71,3 +71,27 @@ class SDXLGen:
 
         return image_files
 
+class SDXLGenEnhanced(SDXLGen):
+    async def run(self):
+        enhanced_prompt = await self.discord_client.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+        if self.lora_name:
+            base64_images = await self.discord_client.avernus_client.sdxl_image(enhanced_prompt,
+                                                                                batch_size=self.batch_size,
+                                                                                negative_prompt=self.negative_prompt,
+                                                                                width=self.width,
+                                                                                height=self.height,
+                                                                                lora_name=self.lora_name)
+        else:
+            base64_images = await self.discord_client.avernus_client.sdxl_image(enhanced_prompt,
+                                                                                batch_size=self.batch_size,
+                                                                                negative_prompt=self.negative_prompt,
+                                                                                width=self.width,
+                                                                                height=self.height,
+                                                                                )
+        images = await self.base64_to_pil_images(base64_images)
+        files = await self.images_to_discord_files(images)
+        await self.channel.send(
+            content=f"SDXL Gen for:`{self.user}` Prompt:`{self.prompt}` Enhanced Prompt:`{enhanced_prompt}`",
+            files=files)
+        sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+        sdxl_logger.info("SDXL Success")
