@@ -614,14 +614,17 @@ class MTGCardGenThreePack(MTGCardGen):
 
         if self.settings["discord"]["mtg_gen_three_pack_send_link"]:
             message = await self.channel.send(f"# `{self.user}` [OPEN PACK](http://theblackgoat.net/cardflip-dynamic.html?username={self.user}&datetimestring={now_string})")
+            message_link = f"https://discord.com/channels/{message.guild.id}/{message.channel.id}/{message.id}"
+            lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt, link=message_link)
+        else:
+            lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
         await self.channel.send(
             content=f"Card Pack for `{self.user}`: Prompt: `{self.prompt}`",
             files=[discord.File(dir_path_1, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True),
                    discord.File(dir_path_2, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True),
                    discord.File(dir_path_3, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True)]
         )
-        message_link = f"https://discord.com/channels/{message.guild.id}/{message.channel.id}/{message.id}"
-        lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt, link=message_link)
+
         lightycard_logger.info("Card Pack Success")
 
     async def make_card(self):
