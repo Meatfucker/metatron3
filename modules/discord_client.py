@@ -28,6 +28,9 @@ class Metatron3(discord.Client):
 
     async def setup_hook(self):
         """This loads the various shit before logging in to discord"""
+        avernus_status = await self.avernus_client.check_status()
+        avernus_status_logger = logger.bind(status=avernus_status)
+        avernus_status_logger.info("Avernus")
         self.loop.create_task(self.process_request_queue())
         await self.register_slash_commands()
 
