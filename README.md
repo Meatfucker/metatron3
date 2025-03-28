@@ -69,6 +69,8 @@ The LLM model which is used can be configured in configs/avernus.json. It takes
 huggingface repo names. Note that the first time a model is used (such as the first run)
 there will be a large delay while the avernus server downloads the model.
 
+There is also a /clear_chat_history command to empty your users chat history
+
 ![](/assets/readme/llm_chat.png)
 
 ## /sdxl_gen:

@@ -7,7 +7,7 @@ from typing import Optional
 from loguru import logger
 from modules.settings_loader import SettingsLoader
 from modules.avernus_client import AvernusClient
-from modules.llm_chat import LlmChat
+from modules.llm_chat import LlmChat, LlmChatClear
 from modules.mtg_card import MTGCardGen, MTGCardGenThreePack
 from modules.sdxl import SDXLGen, SDXLGenEnhanced
 from modules.flux import FluxGen, FluxGenEnhanced
@@ -96,6 +96,11 @@ class Metatron3(discord.Client):
             callback=self.toggle_user_ban
         ))
         self.slash_commands.add_command(discord.app_commands.Command(
+            name="clear_chat_history",
+            description="Clears the users chat history with the LLM",
+            callback=self.clear_chat_history
+        ))
+        self.slash_commands.add_command(discord.app_commands.Command(
             name="mtg_gen",
             description="This generates a satire MTG card",
             callback=self.mtg_gen
@@ -139,6 +144,21 @@ class Metatron3(discord.Client):
                                                     ephemeral=True, delete_after=5)
         except Exception as e:
             logger.info(f"Ban exception: {e}")
+
+    async def clear_chat_history(self, interaction: discord.Interaction):
+        """Clears a users saved llm chat history"""
+
+        clear_chat_request = LlmChatClear(self, interaction.channel, interaction.user)
+
+        if await self.is_room_in_queue(interaction.user.id):
+            clear_chat_queue_logger = logger.bind(user=interaction.user.name)
+            clear_chat_queue_logger.info(f'Chat History Cleared')
+            self.request_queue_concurrency_list[interaction.user.id] += 1
+            await self.request_queue.put(clear_chat_request)
+            await interaction.response.send_message('Clearing chat history:', ephemeral=True, delete_after=5)
+        else:
+            await interaction.response.send_message("Queue limit reached, please wait until your current gen or gens finish")
+
 
     async def mtg_gen(self, interaction: discord.Interaction, prompt: str):
         """This is the slash command to generate a card."""
