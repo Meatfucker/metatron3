@@ -83,6 +83,7 @@ This generates an image with the sdxl model specified in configs/avernus.json
 - height: Same as above but tall style
 - batch_size: The number of images to generate at once. Combined with image resolution this can have a direct and large effect on video memory usage. If you are having lots of avernus Out Of Memory issues, try decreasing batch size and/or resolution
 - lora_name: this is the filename(including safetensors extesion) of a lora located in appropriate avernus server lora directory.
+- enhance_promt: This will send the user prompt to the default chat llm to be "improved"
 
 ![](/assets/readme/sdxl_gen.png)
 
@@ -94,6 +95,7 @@ This generates an image using the flux.dev model, which is higher quality than s
 - width: The width in pixels of the image to generate. Defaults to 1024 Be careful of setting this too high as itll require more video memory and over a certain point cause deformed generations.
 - height: Same as above but tall style
 - batch_size: The number of images to generate at once. Combined with image resolution this can have a direct and large effect on video memory usage. If you are having lots of avernus Out Of Memory issues, try decreasing batch size and/or resolution
+- - enhance_promt: This will send the user prompt to the default chat llm to be "improved"
 
 ![](/assets/readme/flux_gen.png)
 
