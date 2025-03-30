@@ -25,12 +25,20 @@ class Metatron3(discord.Client):
         self.request_queue_concurrency_list = {}
         self.request_currently_processing = False
         self.allowed_mentions = discord.AllowedMentions(everyone=False, replied_user=True, users=True)
+        self.sd_xl_loras_choices = []
+        self.flux_loras_choices = []
 
     async def setup_hook(self):
         """This loads the various shit before logging in to discord"""
         avernus_status = await self.avernus_client.check_status()
         avernus_status_logger = logger.bind(status=avernus_status)
         avernus_status_logger.info("Avernus")
+        sd_xl_loras_list = await self.avernus_client.list_sdxl_loras()  # get the list of available loras to build the interface with
+        for lora in sd_xl_loras_list:
+            self.sd_xl_loras_choices.append(discord.app_commands.Choice(name=lora, value=lora))
+        flux_loras_list = await self.avernus_client.list_flux_loras()  # get the list of available loras to build the interface with
+        for lora in flux_loras_list:
+            self.flux_loras_choices.append(discord.app_commands.Choice(name=lora, value=lora))
         self.loop.create_task(self.process_request_queue())
         await self.register_slash_commands()
 
@@ -93,36 +101,32 @@ class Metatron3(discord.Client):
         return False  # Return False if file doesn't exist
 
     async def register_slash_commands(self):
-        self.slash_commands.add_command(discord.app_commands.Command(
-            name="toggle_user_ban",
-            description="Toggles whether a user is banned or not",
-            callback=self.toggle_user_ban
-        ))
-        self.slash_commands.add_command(discord.app_commands.Command(
-            name="clear_chat_history",
-            description="Clears the users chat history with the LLM",
-            callback=self.clear_chat_history
-        ))
-        self.slash_commands.add_command(discord.app_commands.Command(
-            name="mtg_gen",
-            description="This generates a satire MTG card",
-            callback=self.mtg_gen
-        ))
-        self.slash_commands.add_command(discord.app_commands.Command(
-            name="mtg_gen_three_pack",
-            description="This generates three satire MTG cards",
-            callback=self.mtg_gen_three_pack
-        ))
-        self.slash_commands.add_command(discord.app_commands.Command(
-            name="sdxl_gen",
-            description="Generate an image using SDXL",
-            callback=self.sdxl_gen
-        ))
-        self.slash_commands.add_command(discord.app_commands.Command(
-            name="flux_gen",
-            description="Generate an image using Flux",
-            callback=self.flux_gen
-        ))
+        toggle_user_ban_command = discord.app_commands.Command(name="toggle_user_ban",
+                                                               description="Toggles whether a user is banned or not",
+                                                               callback=self.toggle_user_ban)
+        clear_chat_command = discord.app_commands.Command(name="clear_chat_history",
+                                                          description="Clears the users chat history with the LLM",
+                                                          callback=self.clear_chat_history)
+        mtg_command = discord.app_commands.Command(name="mtg_gen",
+                                                   description="This generates a satire MTG card",
+                                                   callback=self.mtg_gen)
+        mtg_three_pack_command = discord.app_commands.Command(name="mtg_gen_three_pack",
+                                                              description="This generates three satire MTG cards",
+                                                              callback=self.mtg_gen_three_pack)
+        sdxl_command = discord.app_commands.Command(name="sdxl_gen",
+                                                    description="Generate an image using SDXL",
+                                                    callback=self.sdxl_gen)
+        sdxl_command._params["lora_name"].choices = self.sd_xl_loras_choices
+        flux_command = discord.app_commands.Command(name="flux_gen",
+                                                    description="Generate an image using Flux",
+                                                    callback=self.flux_gen)
+        flux_command._params["lora_name"].choices = self.flux_loras_choices
+        self.slash_commands.add_command(toggle_user_ban_command)
+        self.slash_commands.add_command(clear_chat_command)
+        self.slash_commands.add_command(mtg_command)
+        self.slash_commands.add_command(mtg_three_pack_command)
+        self.slash_commands.add_command(sdxl_command)
+        self.slash_commands.add_command(flux_command)
 
     async def toggle_user_ban(self, interaction: discord.Interaction, user_id: str):
         """Toggles the 'banned' setting for the user in their JSON file.
@@ -191,9 +195,16 @@ class Metatron3(discord.Client):
         else:
             await interaction.response.send_message("Queue limit reached, please wait until your current gen or gens finish")
 
-    async def sdxl_gen(self, interaction: discord.Interaction, prompt: str, negative_prompt: Optional[str],
-                       width: Optional[int], height: Optional[int], batch_size: Optional[int], lora_name: Optional[str],
-                       enhance_prompt: Optional[bool]):
+    async def sdxl_gen(self,
+                       interaction: discord.Interaction,
+                       prompt: str,
+                       negative_prompt: Optional[str],
+                       width: Optional[int],
+                       height: Optional[int],
+                       batch_size: Optional[int],
+                       enhance_prompt: Optional[bool],
+                       lora_name: Optional[str]
+                       ):
         """This is the slash command to generate SDXL images"""
         if enhance_prompt:
             sdxl_request = SDXLGenEnhanced(self,
