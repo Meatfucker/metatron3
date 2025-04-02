@@ -25,6 +25,7 @@ class Metatron3(discord.Client):
         self.request_queue_concurrency_list = {}
         self.request_currently_processing = False
         self.allowed_mentions = discord.AllowedMentions(everyone=False, replied_user=True, users=True)
+        self.sd_xl_models_choices = []
         self.sd_xl_loras_choices = []
         self.flux_loras_choices = []
 
@@ -33,12 +34,7 @@ class Metatron3(discord.Client):
         avernus_status = await self.avernus_client.check_status()
         avernus_status_logger = logger.bind(status=avernus_status)
         avernus_status_logger.info("Avernus")
-        sd_xl_loras_list = await self.avernus_client.list_sdxl_loras()  # get the list of available loras to build the interface with
-        for lora in sd_xl_loras_list:
-            self.sd_xl_loras_choices.append(discord.app_commands.Choice(name=lora, value=lora))
-        flux_loras_list = await self.avernus_client.list_flux_loras()  # get the list of available loras to build the interface with
-        for lora in flux_loras_list:
-            self.flux_loras_choices.append(discord.app_commands.Choice(name=lora, value=lora))
+        await self.build_discord_choices()
         self.loop.create_task(self.process_request_queue())
         await self.register_slash_commands()
 
@@ -100,6 +96,19 @@ class Metatron3(discord.Client):
                     return False
         return False  # Return False if file doesn't exist
 
+    async def build_discord_choices(self):
+        sd_xl_loras_list = await self.avernus_client.list_sdxl_loras()  # get the list of available loras to build the interface with
+        for lora in sd_xl_loras_list:
+            self.sd_xl_loras_choices.append(discord.app_commands.Choice(name=lora, value=lora))
+
+        flux_loras_list = await self.avernus_client.list_flux_loras()  # get the list of available loras to build the interface with
+        for lora in flux_loras_list:
+            self.flux_loras_choices.append(discord.app_commands.Choice(name=lora, value=lora))
+
+        for model in self.settings["avernus"]["sdxl_models_list"]:
+            self.sd_xl_models_choices.append(discord.app_commands.Choice(name=model, value=model))
+
+
     async def register_slash_commands(self):
         toggle_user_ban_command = discord.app_commands.Command(name="toggle_user_ban",
                                                                description="Toggles whether a user is banned or not",
@@ -116,6 +125,7 @@ class Metatron3(discord.Client):
         sdxl_command = discord.app_commands.Command(name="sdxl_gen",
                                                     description="Generate an image using SDXL",
                                                     callback=self.sdxl_gen)
+        sdxl_command._params["model_name"].choices = self.sd_xl_models_choices
         sdxl_command._params["lora_name"].choices = self.sd_xl_loras_choices
         flux_command = discord.app_commands.Command(name="flux_gen",
                                                     description="Generate an image using Flux",
@@ -203,7 +213,8 @@ class Metatron3(discord.Client):
                        height: Optional[int],
                        batch_size: Optional[int],
                        enhance_prompt: Optional[bool],
-                       lora_name: Optional[str]
+                       lora_name: Optional[str],
+                       model_name: Optional[str]
                        ):
         """This is the slash command to generate SDXL images"""
         if enhance_prompt:
