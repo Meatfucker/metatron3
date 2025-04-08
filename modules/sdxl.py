@@ -30,6 +30,8 @@ class SDXLGen:
         self.height = height
         self.lora_name = lora_name
         self.batch_size = batch_size
+        if self.batch_size > 10:
+            self.batch_size = 10
 
     async def run(self):
         if self.lora_name:
