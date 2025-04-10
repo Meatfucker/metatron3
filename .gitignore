@@ -4,13 +4,14 @@
 /.idea
 /.git
 /configs/users/*
+!configs/users
 !/configs/users/user_history_goes.here.txt
 /webhost/
 /assets/mtg_card_gen/users/*
+!/assets/mtg_card_gen/users
 !/assets/mtg_card_gen/users/user_cards_will_be_here.txt
-/configs/channels/1268418010008387684.json
-/configs/twitch.json-backup
-/configs/discord.json-backup
+/configs/channels/*
+!/configs/channels
 /configs/discord.json
 /configs/twitch.json
 /configs/avernus.json
