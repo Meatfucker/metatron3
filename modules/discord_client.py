@@ -218,6 +218,10 @@ class Metatron3(discord.Client):
                        i2i_strength: Optional[float],
                        batch_size: Optional[int] = 4,):
         """This is the slash command to generate SDXL images"""
+        if i2i_image:
+            if "image" not in i2i_image.content_type:
+                await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
+                return
         if enhance_prompt:
             sdxl_request = SDXLGenEnhanced(self,
                                            prompt,
@@ -266,6 +270,10 @@ class Metatron3(discord.Client):
                        i2i_strength: Optional[float],
                        batch_size: Optional[int] = 4):
         """This is the slash command to generate Flux images"""
+        if i2i_image:
+            if "image" not in i2i_image.content_type:
+                await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
+                return
         if enhance_prompt:
             flux_request = FluxGenEnhanced(self,
                                            prompt,

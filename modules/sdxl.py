@@ -3,6 +3,7 @@ import io
 import re
 import discord
 from loguru import logger
+from PIL import Image
 from modules.settings_loader import SettingsLoader
 
 class SDXLGen:
@@ -40,10 +41,15 @@ class SDXLGen:
 
     async def run(self):
         kwargs = {"prompt": self.prompt,
-                  "negative_prompt": self.negative_prompt,
-                  "width": self.width,
-                  "height": self.height,
-                  }
+                  "negative_prompt": self.negative_prompt}
+        if self.height:
+            kwargs["height"] = self.height
+        else:
+            kwargs["height"] = 1024
+        if self.width:
+            kwargs["width"] = self.width
+        else:
+            kwargs["width"] = 1024
         if self.batch_size:
             kwargs["batch_size"] = self.batch_size
         if self.lora_name:
@@ -51,7 +57,7 @@ class SDXLGen:
         if self.model_name:
             kwargs["model_name"] = self.model_name
         if self.i2i_image:
-            self.i2i_image_base64 = await self.image_to_base64(self.i2i_image)
+            self.i2i_image_base64 = await self.image_to_base64(self.i2i_image, kwargs["width"], kwargs["height"])
             kwargs["image"] = self.i2i_image_base64
         if self.strength:
             kwargs["strength"] = self.strength
@@ -97,9 +103,14 @@ class SDXLGen:
         return image_files
 
     @staticmethod
-    async def image_to_base64(image):
+    async def image_to_base64(image, width, height):
+        attachment_buffer = io.BytesIO()
+        await image.save(attachment_buffer)
+        image = Image.open(attachment_buffer)
+        image = image.convert("RGB")
+        image = image.resize((width, height))
         buffered = io.BytesIO()
-        await image.save(buffered)
+        image.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 
@@ -107,16 +118,23 @@ class SDXLGenEnhanced(SDXLGen):
     async def run(self):
         enhanced_prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
         kwargs = {"prompt": self.prompt,
-                  "negative_prompt": self.negative_prompt,
-                  "width": self.width,
-                  "height": self.height,
-                  "batch_size": self.batch_size}
+                  "negative_prompt": self.negative_prompt}
+        if self.height:
+            kwargs["height"] = self.height
+        else:
+            kwargs["height"] = 1024
+        if self.width:
+            kwargs["width"] = self.width
+        else:
+            kwargs["width"] = 1024
+        if self.batch_size:
+            kwargs["batch_size"] = self.batch_size
         if self.lora_name:
             kwargs["lora_name"] = self.lora_name
         if self.model_name:
             kwargs["model_name"] = self.model_name
         if self.i2i_image:
-            self.i2i_image_base64 = await self.image_to_base64(self.i2i_image)
+            self.i2i_image_base64 = await self.image_to_base64(self.i2i_image, kwargs["width"], kwargs["height"])
             kwargs["image"] = self.i2i_image_base64
         if self.strength:
             kwargs["strength"] = self.strength
