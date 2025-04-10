@@ -115,6 +115,11 @@ Same as above but generates three at a time, which is also what is triggered if 
 
 ![](/assets/readme/mtg_gen_three_pack.png)
 
+# TODO
+
+- Let a user know how many gens are ahead of them in the queue
+- Let a user know if a gen fails for any reason
+
 
 
 

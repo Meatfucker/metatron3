@@ -15,7 +15,9 @@ class FluxGen:
                  width,
                  height,
                  lora_name=None,
-                 batch_size=1):
+                 batch_size=None,
+                 i2i_image=None,
+                 strength=None):
         self.settings = SettingsLoader("configs")
         self.discord_client = discord_client
         self.avernus_client = discord_client.avernus_client
@@ -25,23 +27,28 @@ class FluxGen:
         self.width = width
         self.height = height
         self.lora_name = lora_name
-        self.batch_size = batch_size
-
+        self.batch_size = batch_size if batch_size is not None else 4
         if self.batch_size > 10:
             self.batch_size = 10
+        self.i2i_image = i2i_image
+        self.i2i_image_base64 = None
+        self.strength = strength
 
     async def run(self):
+        kwargs = {"prompt": self.prompt,
+                  "width": self.width,
+                  "height": self.height,
+                  }
+        if self.batch_size:
+            kwargs["batch_size"] = self.batch_size
         if self.lora_name:
-            base64_images = await self.avernus_client.flux_image(self.prompt,
-                                                                 batch_size=self.batch_size,
-                                                                 width=self.width,
-                                                                 height=self.height,
-                                                                 lora_name=self.lora_name)
-        else:
-            base64_images = await self.avernus_client.flux_image(self.prompt,
-                                                                 batch_size=self.batch_size,
-                                                                 width=self.width,
-                                                                 height=self.height)
+            kwargs["lora_name"] = self.lora_name
+        if self.i2i_image:
+            self.i2i_image_base64 = await self.image_to_base64(self.i2i_image)
+            kwargs["image"] = self.i2i_image_base64
+        if self.strength:
+            kwargs["strength"] = self.strength
+        base64_images = await self.avernus_client.flux_image(**kwargs)
         images = await self.base64_to_pil_images(base64_images)
         files = await self.images_to_discord_files(images)
         await self.channel.send(
@@ -54,11 +61,11 @@ class FluxGen:
                              self.width,
                              self.height,
                              self.lora_name,
+                             self.i2i_image,
+                             self.strength,
                              self.batch_size))
-
         sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
         sdxl_logger.info("Flux Success")
-
 
     async def images_to_discord_files(self, images):
         """Takes a list of images or image objects and returns a list of discord file objects"""
@@ -80,22 +87,27 @@ class FluxGen:
 
         return image_files
 
+    @staticmethod
+    async def image_to_base64(image):
+        buffered = io.BytesIO()
+        await image.save(buffered)
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 class FluxGenEnhanced(FluxGen):
     async def run(self):
         enhanced_prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+        kwargs = {"prompt": self.prompt,
+                  "width": self.width,
+                  "height": self.height,
+                  "batch_size": self.batch_size}
         if self.lora_name:
-            base64_images = await self.avernus_client.flux_image(enhanced_prompt,
-                                                                                batch_size=self.batch_size,
-                                                                                width=self.width,
-                                                                                height=self.height,
-                                                                                lora_name=self.lora_name)
-        else:
-            base64_images = await self.avernus_client.flux_image(enhanced_prompt,
-                                                                                batch_size=self.batch_size,
-                                                                                width=self.width,
-                                                                                height=self.height,
-                                                                                )
+            kwargs["lora_name"] = self.lora_name
+        if self.i2i_image:
+            self.i2i_image_base64 = await self.image_to_base64(self.i2i_image)
+            kwargs["image"] = self.i2i_image_base64
+        if self.strength:
+            kwargs["strength"] = self.strength
+        base64_images = await self.avernus_client.flux_image(**kwargs)
         images = await self.base64_to_pil_images(base64_images)
         files = await self.images_to_discord_files(images)
         await self.channel.send(
@@ -108,6 +120,8 @@ class FluxGenEnhanced(FluxGen):
                                      self.width,
                                      self.height,
                                      self.lora_name,
+                                     self.i2i_image,
+                                     self.strength,
                                      self.batch_size))
 
         sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
@@ -123,6 +137,8 @@ class FluxButtons(discord.ui.View):
                  width,
                  height,
                  lora_name=None,
+                 i2i_image=None,
+                 strength=None,
                  batch_size=4):
         super().__init__()
         self.timeout = None  # Disables the timeout on the buttons
@@ -134,6 +150,8 @@ class FluxButtons(discord.ui.View):
         self.height = height
         self.lora_name = lora_name
         self.batch_size = batch_size
+        self.i2i_image = i2i_image
+        self.strength = strength
 
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -147,7 +165,9 @@ class FluxButtons(discord.ui.View):
                                        width=self.width,
                                        height=self.height,
                                        batch_size=self.batch_size,
-                                       lora_name=self.lora_name)
+                                       lora_name=self.lora_name,
+                                       i2i_image=self.i2i_image,
+                                       strength=self.strength)
                 await interaction.response.send_message("Rerolling...", ephemeral=True, delete_after=5)
                 flux_queuelogger = logger.bind(user=self.user.name, prompt=self.prompt)
                 flux_queuelogger.info("Flux Queued")
@@ -194,7 +214,9 @@ class FluxEnhancedButtons(FluxButtons):
                                                width=self.width,
                                                height=self.height,
                                                batch_size=self.batch_size,
-                                               lora_name=self.lora_name)
+                                               lora_name=self.lora_name,
+                                               i2i_image=self.i2i_image,
+                                               strength=self.strength)
                 await interaction.response.send_message("Rerolling...", ephemeral=True, delete_after=5)
                 flux_queuelogger = logger.bind(user=self.user.name, prompt=self.prompt)
                 flux_queuelogger.info("Flux Queued")

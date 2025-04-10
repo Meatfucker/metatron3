@@ -211,11 +211,12 @@ class Metatron3(discord.Client):
                        negative_prompt: Optional[str],
                        width: Optional[int],
                        height: Optional[int],
-                       batch_size: Optional[int],
                        enhance_prompt: Optional[bool],
                        lora_name: Optional[str],
-                       model_name: Optional[str]
-                       ):
+                       model_name: Optional[str],
+                       i2i_image: Optional[discord.Attachment],
+                       i2i_strength: Optional[float],
+                       batch_size: Optional[int] = 4,):
         """This is the slash command to generate SDXL images"""
         if enhance_prompt:
             sdxl_request = SDXLGenEnhanced(self,
@@ -226,7 +227,10 @@ class Metatron3(discord.Client):
                                            width=width,
                                            height=height,
                                            batch_size=batch_size,
-                                           lora_name=lora_name)
+                                           lora_name=lora_name,
+                                           model_name=model_name,
+                                           i2i_image=i2i_image,
+                                           strength=i2i_strength)
         else:
             sdxl_request = SDXLGen(self,
                                    prompt,
@@ -236,7 +240,10 @@ class Metatron3(discord.Client):
                                    width=width,
                                    height=height,
                                    batch_size=batch_size,
-                                   lora_name=lora_name)
+                                   lora_name=lora_name,
+                                   model_name=model_name,
+                                   i2i_image=i2i_image,
+                                   strength=i2i_strength)
 
         if await self.is_room_in_queue(interaction.user.id):
             sdxl_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
@@ -248,9 +255,16 @@ class Metatron3(discord.Client):
             await interaction.response.send_message(
                 "Queue limit reached, please wait until your current gen or gens finish")
 
-    async def flux_gen(self, interaction: discord.Interaction, prompt: str, width: Optional[int],
-                       height: Optional[int], batch_size: Optional[int], lora_name: Optional[str],
-                       enhance_prompt: Optional[bool]):
+    async def flux_gen(self,
+                       interaction: discord.Interaction,
+                       prompt: str,
+                       width: Optional[int],
+                       height: Optional[int],
+                       lora_name: Optional[str],
+                       enhance_prompt: Optional[bool],
+                       i2i_image: Optional[discord.Attachment],
+                       i2i_strength: Optional[float],
+                       batch_size: Optional[int] = 4):
         """This is the slash command to generate Flux images"""
         if enhance_prompt:
             flux_request = FluxGenEnhanced(self,
@@ -260,7 +274,9 @@ class Metatron3(discord.Client):
                                            width=width,
                                            height=height,
                                            batch_size=batch_size,
-                                           lora_name=lora_name)
+                                           lora_name=lora_name,
+                                           i2i_image=i2i_image,
+                                           strength=i2i_strength)
         else:
             flux_request = FluxGen(self,
                                    prompt,
@@ -269,7 +285,9 @@ class Metatron3(discord.Client):
                                    width=width,
                                    height=height,
                                    batch_size=batch_size,
-                                   lora_name=lora_name)
+                                   lora_name=lora_name,
+                                   i2i_image=i2i_image,
+                                   strength=i2i_strength)
 
         if await self.is_room_in_queue(interaction.user.id):
             flux_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)

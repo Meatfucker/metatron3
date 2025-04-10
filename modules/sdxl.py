@@ -5,8 +5,6 @@ import discord
 from loguru import logger
 from modules.settings_loader import SettingsLoader
 
-
-
 class SDXLGen:
     """This is the queue object for sdxl generations"""
     def __init__(self,
@@ -18,7 +16,10 @@ class SDXLGen:
                  height,
                  negative_prompt=None,
                  lora_name=None,
-                 batch_size=4):
+                 batch_size=None,
+                 model_name=None,
+                 i2i_image=None,
+                 strength=None):
         self.settings = SettingsLoader("configs")
         self.discord_client = discord_client
         self.avernus_client = discord_client.avernus_client
@@ -29,24 +30,32 @@ class SDXLGen:
         self.width = width
         self.height = height
         self.lora_name = lora_name
-        self.batch_size = batch_size
+        self.batch_size = batch_size if batch_size is not None else 4
         if self.batch_size > 10:
             self.batch_size = 10
+        self.model_name = model_name
+        self.i2i_image = i2i_image
+        self.i2i_image_base64 = None
+        self.strength = strength
 
     async def run(self):
+        kwargs = {"prompt": self.prompt,
+                  "negative_prompt": self.negative_prompt,
+                  "width": self.width,
+                  "height": self.height,
+                  }
+        if self.batch_size:
+            kwargs["batch_size"] = self.batch_size
         if self.lora_name:
-            base64_images = await self.avernus_client.sdxl_image(self.prompt,
-                                                                 batch_size=self.batch_size,
-                                                                 negative_prompt=self.negative_prompt,
-                                                                 width=self.width,
-                                                                 height=self.height,
-                                                                 lora_name=self.lora_name)
-        else:
-            base64_images = await self.avernus_client.sdxl_image(self.prompt,
-                                                                 batch_size=self.batch_size,
-                                                                 negative_prompt=self.negative_prompt,
-                                                                 width=self.width,
-                                                                 height=self.height)
+            kwargs["lora_name"] = self.lora_name
+        if self.model_name:
+            kwargs["model_name"] = self.model_name
+        if self.i2i_image:
+            self.i2i_image_base64 = await self.image_to_base64(self.i2i_image)
+            kwargs["image"] = self.i2i_image_base64
+        if self.strength:
+            kwargs["strength"] = self.strength
+        base64_images = await self.avernus_client.sdxl_image(**kwargs)
         images = await self.base64_to_pil_images(base64_images)
         files = await self.images_to_discord_files(images)
         await self.channel.send(
@@ -60,6 +69,9 @@ class SDXLGen:
                              self.height,
                              self.negative_prompt,
                              self.lora_name,
+                             self.model_name,
+                             self.i2i_image,
+                             self.strength,
                              self.batch_size))
         sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
         sdxl_logger.info("SDXL Success")
@@ -84,24 +96,31 @@ class SDXLGen:
 
         return image_files
 
+    @staticmethod
+    async def image_to_base64(image):
+        buffered = io.BytesIO()
+        await image.save(buffered)
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
 
 class SDXLGenEnhanced(SDXLGen):
     async def run(self):
         enhanced_prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+        kwargs = {"prompt": self.prompt,
+                  "negative_prompt": self.negative_prompt,
+                  "width": self.width,
+                  "height": self.height,
+                  "batch_size": self.batch_size}
         if self.lora_name:
-            base64_images = await self.avernus_client.sdxl_image(enhanced_prompt,
-                                                                                batch_size=self.batch_size,
-                                                                                negative_prompt=self.negative_prompt,
-                                                                                width=self.width,
-                                                                                height=self.height,
-                                                                                lora_name=self.lora_name)
-        else:
-            base64_images = await self.avernus_client.sdxl_image(enhanced_prompt,
-                                                                                batch_size=self.batch_size,
-                                                                                negative_prompt=self.negative_prompt,
-                                                                                width=self.width,
-                                                                                height=self.height,
-                                                                                )
+            kwargs["lora_name"] = self.lora_name
+        if self.model_name:
+            kwargs["model_name"] = self.model_name
+        if self.i2i_image:
+            self.i2i_image_base64 = await self.image_to_base64(self.i2i_image)
+            kwargs["image"] = self.i2i_image_base64
+        if self.strength:
+            kwargs["strength"] = self.strength
+        base64_images = await self.avernus_client.sdxl_image(**kwargs)
         images = await self.base64_to_pil_images(base64_images)
         files = await self.images_to_discord_files(images)
         await self.channel.send(
@@ -115,6 +134,9 @@ class SDXLGenEnhanced(SDXLGen):
                                      self.height,
                                      self.negative_prompt,
                                      self.lora_name,
+                                     self.model_name,
+                                     self.i2i_image,
+                                     self.strength,
                                      self.batch_size))
         sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
         sdxl_logger.info("SDXL Success")
@@ -131,6 +153,9 @@ class SDXLButtons(discord.ui.View):
                  height,
                  negative_prompt=None,
                  lora_name=None,
+                 model_name=None,
+                 i2i_image=None,
+                 strength=None,
                  batch_size=4):
         super().__init__()
         self.timeout = None  # Disables the timeout on the buttons
@@ -143,6 +168,9 @@ class SDXLButtons(discord.ui.View):
         self.height = height
         self.lora_name = lora_name
         self.batch_size = batch_size
+        self.model_name = model_name
+        self.i2i_image = i2i_image
+        self.strength = strength
 
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -157,7 +185,10 @@ class SDXLButtons(discord.ui.View):
                                        width=self.width,
                                        height=self.height,
                                        batch_size=self.batch_size,
-                                       lora_name=self.lora_name)
+                                       lora_name=self.lora_name,
+                                       model_name=self.model_name,
+                                       i2i_image=self.i2i_image,
+                                       strength=self.strength)
                 await interaction.response.send_message("Rerolling...", ephemeral=True, delete_after=5)
                 sdxl_queuelogger = logger.bind(user=self.user.name, prompt=self.prompt)
                 sdxl_queuelogger.info("SDXL Queued")
@@ -205,7 +236,10 @@ class SDXLEnhancedButtons(SDXLButtons):
                                                width=self.width,
                                                height=self.height,
                                                batch_size=self.batch_size,
-                                               lora_name=self.lora_name)
+                                               lora_name=self.lora_name,
+                                               model_name=self.model_name,
+                                               i2i_image=self.i2i_image,
+                                               strength=self.strength)
                 await interaction.response.send_message("Rerolling...", ephemeral=True, delete_after=5)
                 sdxl_queuelogger = logger.bind(user=self.user.name, prompt=self.prompt)
                 sdxl_queuelogger.info("SDXL Queued")
