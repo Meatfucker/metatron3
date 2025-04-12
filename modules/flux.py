@@ -1,6 +1,7 @@
 import base64
 import io
 import re
+import time
 import discord
 from loguru import logger
 from PIL import Image
@@ -36,6 +37,7 @@ class FluxGen:
         self.strength = strength
 
     async def run(self):
+        start_time = time.time()
         kwargs = {"prompt": self.prompt}
         if self.height:
             kwargs["height"] = self.height
@@ -57,8 +59,10 @@ class FluxGen:
         base64_images = await self.avernus_client.flux_image(**kwargs)
         images = await self.base64_to_pil_images(base64_images)
         files = await self.images_to_discord_files(images)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
         await self.channel.send(
-            content=f"Flux Gen for {self.user.mention}: Prompt: `{self.prompt}`",
+            content=f"Flux Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora:`{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
             files=files,
             view=FluxButtons(self.discord_client,
                              self.prompt,
@@ -106,6 +110,7 @@ class FluxGen:
 
 class FluxGenEnhanced(FluxGen):
     async def run(self):
+        start_time = time.time()
         enhanced_prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
         kwargs = {"prompt": self.prompt}
         if self.height:
@@ -128,8 +133,10 @@ class FluxGenEnhanced(FluxGen):
         base64_images = await self.avernus_client.flux_image(**kwargs)
         images = await self.base64_to_pil_images(base64_images)
         files = await self.images_to_discord_files(images)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
         await self.channel.send(
-            content=f"Flux Gen for: {self.user.mention} Prompt:`{self.prompt}` Enhanced Prompt:`{enhanced_prompt}`",
+            content=f"Flux Gen for: {self.user.mention} Prompt:`{self.prompt}` Enhanced Prompt:`{enhanced_prompt}` Lora:`{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
             files=files,
             view=FluxEnhancedButtons(self.discord_client,
                                      self.prompt,
@@ -186,13 +193,18 @@ class FluxButtons(discord.ui.View):
                                        lora_name=self.lora_name,
                                        i2i_image=self.i2i_image,
                                        strength=self.strength)
-                await interaction.response.send_message("Rerolling...", ephemeral=True, delete_after=5)
+                await interaction.response.send_message(
+                    f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
+                    ephemeral=True
+                )
                 flux_queuelogger = logger.bind(user=self.user.name, prompt=self.prompt)
                 flux_queuelogger.info("Flux Queued")
                 self.discord_client.request_queue_concurrency_list[self.user.id] += 1
                 await self.discord_client.request_queue.put(flux_request)
             else:
-                await interaction.response.send_message("Queue limit reached, please wait until your current gen or gens finish")
+                await interaction.response.send_message(
+                    "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+                )
 
     @discord.ui.button(label='Mail', emoji="✉", style=discord.ButtonStyle.grey)
     async def dmimage(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -235,10 +247,15 @@ class FluxEnhancedButtons(FluxButtons):
                                                lora_name=self.lora_name,
                                                i2i_image=self.i2i_image,
                                                strength=self.strength)
-                await interaction.response.send_message("Rerolling...", ephemeral=True, delete_after=5)
+                await interaction.response.send_message(
+                    f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
+                    ephemeral=True
+                )
                 flux_queuelogger = logger.bind(user=self.user.name, prompt=self.prompt)
                 flux_queuelogger.info("Flux Queued")
                 self.discord_client.request_queue_concurrency_list[self.user.id] += 1
                 await self.discord_client.request_queue.put(flux_request)
             else:
-                await interaction.response.send_message("Queue limit reached, please wait until your current gen or gens finish")
+                await interaction.response.send_message(
+                    "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+                )

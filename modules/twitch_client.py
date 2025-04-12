@@ -38,7 +38,7 @@ class TwitchEventSubClient:
                                     user = CustomDiscordUser(username)
                                     channel = self.discord_client.get_channel(self.settings["twitch"]["card_reward_channel"])
                                     card_logger = logger.bind(user=username, prompt=prompt)
-                                    card_logger.info(f"Card Redemption {event['user_name']}")
+                                    card_logger.info("Card Redemption")
                                     if await self.discord_client.is_room_in_queue(user.id):
                                         mtg_card_request = MTGCardGenThreePack(self.discord_client, prompt, channel, user)
                                         self.discord_client.request_queue_concurrency_list[user.id] += 1

@@ -84,7 +84,8 @@ class Metatron3(discord.Client):
             return False
         return True
 
-    async def is_user_banned(self, user_id):
+    @staticmethod
+    async def is_user_banned(user_id):
         """Checks the users config if they are banned and returns true if they are, else false"""
         file_path = f"configs/users/{user_id}.json"
         if os.path.exists(file_path):
@@ -138,7 +139,8 @@ class Metatron3(discord.Client):
         self.slash_commands.add_command(sdxl_command)
         self.slash_commands.add_command(flux_command)
 
-    async def toggle_user_ban(self, interaction: discord.Interaction, user_id: str):
+    @staticmethod
+    async def toggle_user_ban(interaction: discord.Interaction, user_id: str):
         """Toggles the 'banned' setting for the user in their JSON file.
         If the key exists, it flips its boolean value.
         If it does not exist, it sets 'banned' to True."""
@@ -171,10 +173,14 @@ class Metatron3(discord.Client):
             clear_chat_queue_logger = logger.bind(user=interaction.user.name)
             clear_chat_queue_logger.info(f'Chat History Cleared')
             self.request_queue_concurrency_list[interaction.user.id] += 1
+            await interaction.response.send_message(
+                f"Clearing chat history: {self.request_queue.qsize()} requests in queue ahead of you.", ephemeral=True
+            )
             await self.request_queue.put(clear_chat_request)
-            await interaction.response.send_message('Clearing chat history:', ephemeral=True, delete_after=5)
         else:
-            await interaction.response.send_message("Queue limit reached, please wait until your current gen or gens finish")
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )
 
 
     async def mtg_gen(self, interaction: discord.Interaction, prompt: str):
@@ -186,10 +192,14 @@ class Metatron3(discord.Client):
             card_queue_logger = logger.bind(user=interaction.user.name, prompt=prompt)
             card_queue_logger.info(f'Card Queued')
             self.request_queue_concurrency_list[interaction.user.id] += 1
+            await interaction.response.send_message(
+                f"Card Being Created: {self.request_queue.qsize()} requests in queue ahead of you", ephemeral=True
+            )
             await self.request_queue.put(mtg_card_request)
-            await interaction.response.send_message('Card Being Created:', ephemeral=True, delete_after=5)
         else:
-            await interaction.response.send_message("Queue limit reached, please wait until your current gen or gens finish")
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )
 
     async def mtg_gen_three_pack(self, interaction: discord.Interaction, prompt: str):
         """This is the slash command to generate a card pack."""
@@ -200,10 +210,14 @@ class Metatron3(discord.Client):
             card_queue_logger = logger.bind(user=interaction.user.name, prompt=prompt)
             card_queue_logger.info(f'Card Pack Queued')
             self.request_queue_concurrency_list[interaction.user.id] += 1
+            await interaction.response.send_message(
+                f"Pack Being Created: {self.request_queue.qsize()} requests in queue ahead of you", ephemeral=True
+            )
             await self.request_queue.put(mtg_card_request)
-            await interaction.response.send_message('Pack Being Created:', ephemeral=True, delete_after=5)
         else:
-            await interaction.response.send_message("Queue limit reached, please wait until your current gen or gens finish")
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )
 
     async def sdxl_gen(self,
                        interaction: discord.Interaction,
@@ -253,11 +267,14 @@ class Metatron3(discord.Client):
             sdxl_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
             sdxl_queuelogger.info("SDXL Queued")
             self.request_queue_concurrency_list[interaction.user.id] += 1
+            await interaction.response.send_message(
+                f"SDXL Image Being Created: {self.request_queue.qsize()} requests in queue ahead of you", ephemeral=True
+            )
             await self.request_queue.put(sdxl_request)
-            await interaction.response.send_message("SDXL Image Being Created:", ephemeral=True, delete_after=5)
         else:
             await interaction.response.send_message(
-                "Queue limit reached, please wait until your current gen or gens finish")
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )
 
     async def flux_gen(self,
                        interaction: discord.Interaction,
@@ -301,8 +318,12 @@ class Metatron3(discord.Client):
             flux_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
             flux_queuelogger.info("Flux Queued")
             self.request_queue_concurrency_list[interaction.user.id] += 1
+            await interaction.response.send_message(
+                f"Flux Image Being Created: {self.request_queue.qsize()} requests in queue ahead of you", ephemeral=True
+            )
             await self.request_queue.put(flux_request)
-            await interaction.response.send_message("Flux Image Being Created:", ephemeral=True, delete_after=5)
+
         else:
             await interaction.response.send_message(
-                "Queue limit reached, please wait until your current gen or gens finish")
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )

@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 
 from loguru import logger
@@ -15,6 +16,7 @@ class LlmChat:
         self.user = user
 
     async def run(self):
+        start_time = time.time()
         try:
             history = await self.get_history()
             if history is None:
@@ -26,7 +28,9 @@ class LlmChat:
                                                                              history)
             await self.add_history("user", self.prompt)
             await self.add_history("assistant", response)
-            await self.channel.send(self.user.mention)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            await self.channel.send(f"{self.user.mention}  Time:`{elapsed_time:.2f} seconds`")
             for i in range(0, len(response), 2000):
                 chunk = response[i:i + 2000]
                 await self.channel.send(content=chunk, mention_author=True)

@@ -5,6 +5,7 @@ import json
 import os
 import random
 import re
+import time
 import discord
 from loguru import logger
 import requests
@@ -36,6 +37,7 @@ class MTGCardGen:
 
     async def run(self):
         """Builds a PIL image containing a card"""
+        start_time = time.time()
         try:
             self.card_primary_mana = random.choice(range(1, 5))
             self.card_secondary_mana = random.choice(range(0, 5))
@@ -59,8 +61,10 @@ class MTGCardGen:
                 self.card.save(file_object, format="PNG")
                 file_object.seek(0)
                 filename = f'lighty_mtg_{self.prompt[:20]}.png'
+                end_time = time.time()
+                elapsed_time = end_time - start_time
                 message = await self.channel.send(
-                    content=f"Twitch Card for `{self.user}`: Prompt: `{self.prompt}`",
+                    content=f"MTG Card for `{self.user}`: Prompt: `{self.prompt}` Time:`{elapsed_time:.2f} seconds`",
                     file=discord.File(file_object, filename=filename, spoiler=True)
                 )
 
@@ -584,6 +588,7 @@ class MTGCardGen:
 class MTGCardGenThreePack(MTGCardGen):
     async def run(self):
         """Builds a PIL image containing a card"""
+        start_time = time.time()
         now = datetime.now()
         now_string = now.strftime("%Y%m%d%H%M%S")
         sanitized_prompt = re.sub(r'[<>:"/\\|?*\x00-\x1F]', '', self.prompt)
@@ -618,8 +623,10 @@ class MTGCardGenThreePack(MTGCardGen):
             lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt, link=message_link)
         else:
             lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
         await self.channel.send(
-            content=f"Card Pack for `{self.user}`: Prompt: `{self.prompt}`",
+            content=f"Card Pack for `{self.user}`: Prompt: `{self.prompt}` Time:`{elapsed_time:.2f} seconds`",
             files=[discord.File(dir_path_1, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True),
                    discord.File(dir_path_2, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True),
                    discord.File(dir_path_3, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True)]
