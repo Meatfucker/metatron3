@@ -78,7 +78,9 @@ class MTGCardGen:
             lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt, link=message_link)
             lightycard_logger.info("Card Success")
         except Exception as e:
-            logger.info(f"MTG_CARD FAILURE: {e}")
+            await self.channel.send(f"{self.user.mention} Flux Error: {e}")
+            flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            flux_logger.error(f"FLUX ERROR: {e}")
 
     def choose_card_type(self):
         """Returns a random card type and associated color"""
@@ -589,50 +591,55 @@ class MTGCardGenThreePack(MTGCardGen):
     async def run(self):
         """Builds a PIL image containing a card"""
         start_time = time.time()
-        now = datetime.now()
-        now_string = now.strftime("%Y%m%d%H%M%S")
-        sanitized_prompt = re.sub(r'[<>:"/\\|?*\x00-\x1F]', '', self.prompt)
+        try:
+            now = datetime.now()
+            now_string = now.strftime("%Y%m%d%H%M%S")
+            sanitized_prompt = re.sub(r'[<>:"/\\|?*\x00-\x1F]', '', self.prompt)
 
-        card1 = await self.make_card()
-        dir_path_1 = f'assets/mtg_card_gen/users/{self.user}/{self.card_type}.{sanitized_prompt[:20]}.{random.randint(1, 99999999)}.webp'
-        card_path_1 = f'assets/mtg_card_gen/users/{self.user}/{now_string}/card1.webp'
-        os.makedirs(os.path.dirname(dir_path_1), exist_ok=True)
-        os.makedirs(os.path.dirname(card_path_1), exist_ok=True)
-        card1.save(dir_path_1, format="WEBP")
-        card1.save(card_path_1, format="WEBP")
+            card1 = await self.make_card()
+            dir_path_1 = f'assets/mtg_card_gen/users/{self.user}/{self.card_type}.{sanitized_prompt[:20]}.{random.randint(1, 99999999)}.webp'
+            card_path_1 = f'assets/mtg_card_gen/users/{self.user}/{now_string}/card1.webp'
+            os.makedirs(os.path.dirname(dir_path_1), exist_ok=True)
+            os.makedirs(os.path.dirname(card_path_1), exist_ok=True)
+            card1.save(dir_path_1, format="WEBP")
+            card1.save(card_path_1, format="WEBP")
 
-        card2 = await self.make_card()
-        dir_path_2 = f'assets/mtg_card_gen/users/{self.user}/{self.card_type}.{sanitized_prompt[:20]}.{random.randint(1, 99999999)}.webp'
-        card_path_2 = f'assets/mtg_card_gen/users/{self.user}/{now_string}/card2.webp'
-        os.makedirs(os.path.dirname(dir_path_2), exist_ok=True)
-        os.makedirs(os.path.dirname(card_path_2), exist_ok=True)
-        card2.save(dir_path_2, format="WEBP")
-        card2.save(card_path_2, format="WEBP")
+            card2 = await self.make_card()
+            dir_path_2 = f'assets/mtg_card_gen/users/{self.user}/{self.card_type}.{sanitized_prompt[:20]}.{random.randint(1, 99999999)}.webp'
+            card_path_2 = f'assets/mtg_card_gen/users/{self.user}/{now_string}/card2.webp'
+            os.makedirs(os.path.dirname(dir_path_2), exist_ok=True)
+            os.makedirs(os.path.dirname(card_path_2), exist_ok=True)
+            card2.save(dir_path_2, format="WEBP")
+            card2.save(card_path_2, format="WEBP")
 
-        card3 = await self.make_card()
-        dir_path_3 = f'assets/mtg_card_gen/users/{self.user}/{self.card_type}.{sanitized_prompt[:20]}.{random.randint(1, 99999999)}.webp'
-        card_path_3 = f'assets/mtg_card_gen/users/{self.user}/{now_string}/card3.webp'
-        os.makedirs(os.path.dirname(dir_path_3), exist_ok=True)
-        os.makedirs(os.path.dirname(card_path_3), exist_ok=True)
-        card3.save(dir_path_3, format="WEBP")
-        card3.save(card_path_3, format="WEBP")
+            card3 = await self.make_card()
+            dir_path_3 = f'assets/mtg_card_gen/users/{self.user}/{self.card_type}.{sanitized_prompt[:20]}.{random.randint(1, 99999999)}.webp'
+            card_path_3 = f'assets/mtg_card_gen/users/{self.user}/{now_string}/card3.webp'
+            os.makedirs(os.path.dirname(dir_path_3), exist_ok=True)
+            os.makedirs(os.path.dirname(card_path_3), exist_ok=True)
+            card3.save(dir_path_3, format="WEBP")
+            card3.save(card_path_3, format="WEBP")
 
-        if self.settings["discord"]["mtg_gen_three_pack_send_link"]:
-            message = await self.channel.send(f"# `{self.user}` [OPEN PACK](http://theblackgoat.net/cardflip-dynamic.html?username={self.user}&datetimestring={now_string})")
-            message_link = f"https://discord.com/channels/{message.guild.id}/{message.channel.id}/{message.id}"
-            lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt, link=message_link)
-        else:
-            lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        await self.channel.send(
-            content=f"Card Pack for `{self.user}`: Prompt: `{self.prompt}` Time:`{elapsed_time:.2f} seconds`",
-            files=[discord.File(dir_path_1, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True),
-                   discord.File(dir_path_2, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True),
-                   discord.File(dir_path_3, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True)]
-        )
+            if self.settings["discord"]["mtg_gen_three_pack_send_link"]:
+                message = await self.channel.send(f"# `{self.user}` [OPEN PACK](http://theblackgoat.net/cardflip-dynamic.html?username={self.user}&datetimestring={now_string})")
+                message_link = f"https://discord.com/channels/{message.guild.id}/{message.channel.id}/{message.id}"
+                lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt, link=message_link)
+            else:
+                lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            await self.channel.send(
+                content=f"Card Pack for `{self.user}`: Prompt: `{self.prompt}` Time:`{elapsed_time:.2f} seconds`",
+                files=[discord.File(dir_path_1, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True),
+                       discord.File(dir_path_2, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True),
+                       discord.File(dir_path_3, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True)]
+            )
 
-        lightycard_logger.info("Card Pack Success")
+            lightycard_logger.info("Card Pack Success")
+        except Exception as e:
+            await self.channel.send(f"{self.user.mention} MTG Error: {e}")
+            mtg_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            mtg_logger.error(f"MTG ERROR: {e}")
 
     async def make_card(self):
         try:

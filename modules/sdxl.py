@@ -42,49 +42,54 @@ class SDXLGen:
 
     async def run(self):
         start_time = time.time()
-        kwargs = {"prompt": self.prompt,
-                  "negative_prompt": self.negative_prompt}
-        if self.height:
-            kwargs["height"] = self.height
-        else:
-            kwargs["height"] = 1024
-        if self.width:
-            kwargs["width"] = self.width
-        else:
-            kwargs["width"] = 1024
-        if self.batch_size:
-            kwargs["batch_size"] = self.batch_size
-        if self.lora_name:
-            kwargs["lora_name"] = self.lora_name
-        if self.model_name:
-            kwargs["model_name"] = self.model_name
-        if self.i2i_image:
-            self.i2i_image_base64 = await self.image_to_base64(self.i2i_image, kwargs["width"], kwargs["height"])
-            kwargs["image"] = self.i2i_image_base64
-        if self.strength:
-            kwargs["strength"] = self.strength
-        base64_images = await self.avernus_client.sdxl_image(**kwargs)
-        images = await self.base64_to_pil_images(base64_images)
-        files = await self.images_to_discord_files(images)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        await self.channel.send(
-            content=f"SDXL Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
-            files=files,
-            view=SDXLButtons(self.discord_client,
-                             self.prompt,
-                             self.channel,
-                             self.user,
-                             self.width,
-                             self.height,
-                             self.negative_prompt,
-                             self.lora_name,
-                             self.model_name,
-                             self.i2i_image,
-                             self.strength,
-                             self.batch_size))
-        sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-        sdxl_logger.info("SDXL Success")
+        try:
+            kwargs = {"prompt": self.prompt,
+                      "negative_prompt": self.negative_prompt}
+            if self.height:
+                kwargs["height"] = self.height
+            else:
+                kwargs["height"] = 1024
+            if self.width:
+                kwargs["width"] = self.width
+            else:
+                kwargs["width"] = 1024
+            if self.batch_size:
+                kwargs["batch_size"] = self.batch_size
+            if self.lora_name:
+                kwargs["lora_name"] = self.lora_name
+            if self.model_name:
+                kwargs["model_name"] = self.model_name
+            if self.i2i_image:
+                self.i2i_image_base64 = await self.image_to_base64(self.i2i_image, kwargs["width"], kwargs["height"])
+                kwargs["image"] = self.i2i_image_base64
+            if self.strength:
+                kwargs["strength"] = self.strength
+            base64_images = await self.avernus_client.sdxl_image(**kwargs)
+            images = await self.base64_to_pil_images(base64_images)
+            files = await self.images_to_discord_files(images)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            await self.channel.send(
+                content=f"SDXL Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
+                files=files,
+                view=SDXLButtons(self.discord_client,
+                                 self.prompt,
+                                 self.channel,
+                                 self.user,
+                                 self.width,
+                                 self.height,
+                                 self.negative_prompt,
+                                 self.lora_name,
+                                 self.model_name,
+                                 self.i2i_image,
+                                 self.strength,
+                                 self.batch_size))
+            sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            sdxl_logger.info("SDXL Success")
+        except Exception as e:
+            await self.channel.send(f"{self.user.mention} SDXL Error: {e}")
+            sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            sdxl_logger.error(f"SDXL ERROR: {e}")
 
     async def images_to_discord_files(self, images):
         """Takes a list of images or image objects and returns a list of discord file objects"""
@@ -121,50 +126,55 @@ class SDXLGen:
 class SDXLGenEnhanced(SDXLGen):
     async def run(self):
         start_time = time.time()
-        enhanced_prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
-        kwargs = {"prompt": self.prompt,
-                  "negative_prompt": self.negative_prompt}
-        if self.height:
-            kwargs["height"] = self.height
-        else:
-            kwargs["height"] = 1024
-        if self.width:
-            kwargs["width"] = self.width
-        else:
-            kwargs["width"] = 1024
-        if self.batch_size:
-            kwargs["batch_size"] = self.batch_size
-        if self.lora_name:
-            kwargs["lora_name"] = self.lora_name
-        if self.model_name:
-            kwargs["model_name"] = self.model_name
-        if self.i2i_image:
-            self.i2i_image_base64 = await self.image_to_base64(self.i2i_image, kwargs["width"], kwargs["height"])
-            kwargs["image"] = self.i2i_image_base64
-        if self.strength:
-            kwargs["strength"] = self.strength
-        base64_images = await self.avernus_client.sdxl_image(**kwargs)
-        images = await self.base64_to_pil_images(base64_images)
-        files = await self.images_to_discord_files(images)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        await self.channel.send(
-            content=f"SDXL Gen for:`{self.user}` Prompt:`{self.prompt}` Enhanced Prompt:`{enhanced_prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
-            files=files,
-            view=SDXLEnhancedButtons(self.discord_client,
-                                     self.prompt,
-                                     self.channel,
-                                     self.user,
-                                     self.width,
-                                     self.height,
-                                     self.negative_prompt,
-                                     self.lora_name,
-                                     self.model_name,
-                                     self.i2i_image,
-                                     self.strength,
-                                     self.batch_size))
-        sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-        sdxl_logger.info("SDXL Success")
+        try:
+            enhanced_prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            kwargs = {"prompt": self.prompt,
+                      "negative_prompt": self.negative_prompt}
+            if self.height:
+                kwargs["height"] = self.height
+            else:
+                kwargs["height"] = 1024
+            if self.width:
+                kwargs["width"] = self.width
+            else:
+                kwargs["width"] = 1024
+            if self.batch_size:
+                kwargs["batch_size"] = self.batch_size
+            if self.lora_name:
+                kwargs["lora_name"] = self.lora_name
+            if self.model_name:
+                kwargs["model_name"] = self.model_name
+            if self.i2i_image:
+                self.i2i_image_base64 = await self.image_to_base64(self.i2i_image, kwargs["width"], kwargs["height"])
+                kwargs["image"] = self.i2i_image_base64
+            if self.strength:
+                kwargs["strength"] = self.strength
+            base64_images = await self.avernus_client.sdxl_image(**kwargs)
+            images = await self.base64_to_pil_images(base64_images)
+            files = await self.images_to_discord_files(images)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            await self.channel.send(
+                content=f"SDXL Gen for:`{self.user}` Prompt:`{self.prompt}` Enhanced Prompt:`{enhanced_prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
+                files=files,
+                view=SDXLEnhancedButtons(self.discord_client,
+                                         self.prompt,
+                                         self.channel,
+                                         self.user,
+                                         self.width,
+                                         self.height,
+                                         self.negative_prompt,
+                                         self.lora_name,
+                                         self.model_name,
+                                         self.i2i_image,
+                                         self.strength,
+                                         self.batch_size))
+            sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            sdxl_logger.info("SDXL Success")
+        except Exception as e:
+            await self.channel.send(f"{self.user.mention} SDXL Error: {e}")
+            sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            sdxl_logger.error(f"SDXL ERROR: {e}")
 
 
 class SDXLButtons(discord.ui.View):

@@ -7,11 +7,11 @@ from modules.avernus_client import AvernusClient
 from modules.twitch_client import TwitchEventSubClient
 
 logger = setup_logger("metatron3.log")
-settings = SettingsLoader("configs")
-url = settings["avernus"]["ip"]
-port = settings["avernus"]["port"]
-avernus_client = AvernusClient(url, port)
-discord_client = Metatron3(avernus_client=avernus_client, intents=discord.Intents.all())
+settings: SettingsLoader = SettingsLoader("configs")
+url: str = settings["avernus"]["ip"]
+port: int = settings["avernus"]["port"]
+avernus_client: AvernusClient = AvernusClient(url, port)
+discord_client: Metatron3 = Metatron3(avernus_client=avernus_client, intents=discord.Intents.all())
 if settings["twitch"]["twitch_enabled"]:
     twitch_client = TwitchEventSubClient(discord_client=discord_client)
 

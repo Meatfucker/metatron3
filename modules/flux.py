@@ -38,44 +38,49 @@ class FluxGen:
 
     async def run(self):
         start_time = time.time()
-        kwargs = {"prompt": self.prompt}
-        if self.height:
-            kwargs["height"] = self.height
-        else:
-            kwargs["height"] = 1024
-        if self.width:
-            kwargs["width"] = self.width
-        else:
-            kwargs["width"] = 1024
-        if self.batch_size:
-            kwargs["batch_size"] = self.batch_size
-        if self.lora_name:
-            kwargs["lora_name"] = self.lora_name
-        if self.i2i_image:
-            self.i2i_image_base64 = await self.image_to_base64(self.i2i_image, kwargs["width"], kwargs["height"])
-            kwargs["image"] = self.i2i_image_base64
-        if self.strength:
-            kwargs["strength"] = self.strength
-        base64_images = await self.avernus_client.flux_image(**kwargs)
-        images = await self.base64_to_pil_images(base64_images)
-        files = await self.images_to_discord_files(images)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        await self.channel.send(
-            content=f"Flux Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora:`{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
-            files=files,
-            view=FluxButtons(self.discord_client,
-                             self.prompt,
-                             self.channel,
-                             self.user,
-                             self.width,
-                             self.height,
-                             self.lora_name,
-                             self.i2i_image,
-                             self.strength,
-                             self.batch_size))
-        sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-        sdxl_logger.info("Flux Success")
+        try:
+            kwargs = {"prompt": self.prompt}
+            if self.height:
+                kwargs["height"] = self.height
+            else:
+                kwargs["height"] = 1024
+            if self.width:
+                kwargs["width"] = self.width
+            else:
+                kwargs["width"] = 1024
+            if self.batch_size:
+                kwargs["batch_size"] = self.batch_size
+            if self.lora_name:
+                kwargs["lora_name"] = self.lora_name
+            if self.i2i_image:
+                self.i2i_image_base64 = await self.image_to_base64(self.i2i_image, kwargs["width"], kwargs["height"])
+                kwargs["image"] = self.i2i_image_base64
+            if self.strength:
+                kwargs["strength"] = self.strength
+            base64_images = await self.avernus_client.flux_image(**kwargs)
+            images = await self.base64_to_pil_images(base64_images)
+            files = await self.images_to_discord_files(images)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            await self.channel.send(
+                content=f"Flux Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora:`{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
+                files=files,
+                view=FluxButtons(self.discord_client,
+                                 self.prompt,
+                                 self.channel,
+                                 self.user,
+                                 self.width,
+                                 self.height,
+                                 self.lora_name,
+                                 self.i2i_image,
+                                 self.strength,
+                                 self.batch_size))
+            flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            flux_logger.info("Flux Success")
+        except Exception as e:
+            await self.channel.send(f"{self.user.mention} Flux Error: {e}")
+            flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            flux_logger.error(f"FLUX ERROR: {e}")
 
     async def images_to_discord_files(self, images):
         """Takes a list of images or image objects and returns a list of discord file objects"""
@@ -111,46 +116,51 @@ class FluxGen:
 class FluxGenEnhanced(FluxGen):
     async def run(self):
         start_time = time.time()
-        enhanced_prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
-        kwargs = {"prompt": self.prompt}
-        if self.height:
-            kwargs["height"] = self.height
-        else:
-            kwargs["height"] = 1024
-        if self.width:
-            kwargs["width"] = self.width
-        else:
-            kwargs["width"] = 1024
-        if self.batch_size:
-            kwargs["batch_size"] = self.batch_size
-        if self.lora_name:
-            kwargs["lora_name"] = self.lora_name
-        if self.i2i_image:
-            self.i2i_image_base64 = await self.image_to_base64(self.i2i_image, kwargs["width"], kwargs["height"])
-            kwargs["image"] = self.i2i_image_base64
-        if self.strength:
-            kwargs["strength"] = self.strength
-        base64_images = await self.avernus_client.flux_image(**kwargs)
-        images = await self.base64_to_pil_images(base64_images)
-        files = await self.images_to_discord_files(images)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        await self.channel.send(
-            content=f"Flux Gen for: {self.user.mention} Prompt:`{self.prompt}` Enhanced Prompt:`{enhanced_prompt}` Lora:`{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
-            files=files,
-            view=FluxEnhancedButtons(self.discord_client,
-                                     self.prompt,
-                                     self.channel,
-                                     self.user,
-                                     self.width,
-                                     self.height,
-                                     self.lora_name,
-                                     self.i2i_image,
-                                     self.strength,
-                                     self.batch_size))
+        try:
+            enhanced_prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            kwargs = {"prompt": self.prompt}
+            if self.height:
+                kwargs["height"] = self.height
+            else:
+                kwargs["height"] = 1024
+            if self.width:
+                kwargs["width"] = self.width
+            else:
+                kwargs["width"] = 1024
+            if self.batch_size:
+                kwargs["batch_size"] = self.batch_size
+            if self.lora_name:
+                kwargs["lora_name"] = self.lora_name
+            if self.i2i_image:
+                self.i2i_image_base64 = await self.image_to_base64(self.i2i_image, kwargs["width"], kwargs["height"])
+                kwargs["image"] = self.i2i_image_base64
+            if self.strength:
+                kwargs["strength"] = self.strength
+            base64_images = await self.avernus_client.flux_image(**kwargs)
+            images = await self.base64_to_pil_images(base64_images)
+            files = await self.images_to_discord_files(images)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            await self.channel.send(
+                content=f"Flux Gen for: {self.user.mention} Prompt:`{self.prompt}` Enhanced Prompt:`{enhanced_prompt}` Lora:`{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
+                files=files,
+                view=FluxEnhancedButtons(self.discord_client,
+                                         self.prompt,
+                                         self.channel,
+                                         self.user,
+                                         self.width,
+                                         self.height,
+                                         self.lora_name,
+                                         self.i2i_image,
+                                         self.strength,
+                                         self.batch_size))
 
-        sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-        sdxl_logger.info("Flux Success")
+            sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            sdxl_logger.info("Flux Success")
+        except Exception as e:
+            await self.channel.send(f"{self.user.mention} Flux Error: {e}")
+            flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            flux_logger.error(f"FLUX ERROR: {e}")
 
 class FluxButtons(discord.ui.View):
     """Class for the ui buttons on /flux_gen"""

@@ -18,16 +18,16 @@ class Metatron3(discord.Client):
     """Discord client for Metatron3"""
     def __init__(self, *, avernus_client: AvernusClient, intents: discord.Intents):
         super().__init__(intents=intents)
-        self.avernus_client = avernus_client
-        self.slash_commands = discord.app_commands.CommandTree(self)
-        self.settings = SettingsLoader("configs")
-        self.request_queue = asyncio.Queue()
-        self.request_queue_concurrency_list = {}
-        self.request_currently_processing = False
-        self.allowed_mentions = discord.AllowedMentions(everyone=False, replied_user=True, users=True)
-        self.sd_xl_models_choices = []
-        self.sd_xl_loras_choices = []
-        self.flux_loras_choices = []
+        self.avernus_client: AvernusClient = avernus_client
+        self.slash_commands: discord.app_commands.CommandTree = discord.app_commands.CommandTree(self)
+        self.settings: SettingsLoader = SettingsLoader("configs")
+        self.request_queue: asyncio.Queue = asyncio.Queue()
+        self.request_queue_concurrency_list: dict = {}
+        self.request_currently_processing: bool = False
+        self.allowed_mentions: discord.AllowedMentions = discord.AllowedMentions(everyone=False, replied_user=True, users=True)
+        self.sd_xl_models_choices: list = []
+        self.sd_xl_loras_choices: list = []
+        self.flux_loras_choices: list = []
 
     async def setup_hook(self):
         """This loads the various shit before logging in to discord"""

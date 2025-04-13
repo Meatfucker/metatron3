@@ -4,13 +4,14 @@ import time
 
 
 from loguru import logger
+
 from modules.settings_loader import SettingsLoader
 
 class LlmChat:
     """This is the queue object to generate chat."""
     def __init__(self, discord_client, prompt, channel, user):
-        self.settings = SettingsLoader("configs")
-        self.prompt = prompt
+        self.settings: SettingsLoader = SettingsLoader("configs")
+        self.prompt: str = prompt
         self.discord_client = discord_client
         self.channel = channel
         self.user = user
@@ -34,10 +35,12 @@ class LlmChat:
             for i in range(0, len(response), 2000):
                 chunk = response[i:i + 2000]
                 await self.channel.send(content=chunk, mention_author=True)
-            generate_chat_logger = logger.bind(user=self.user)
+            generate_chat_logger = logger.bind(user=self.user, channel=self.channel)
             generate_chat_logger.info("Chat Success")
         except Exception as e:
-            logger.info(f"LLM FAILURE: {e}")
+            await self.channel.send(f"{self.user.mention} LLM Error: {e}")
+            llm_logger = logger.bind(user=self.user, channel=self.channel)
+            llm_logger.error(f"LLM FAILURE: {e}")
 
 
     async def add_history(self, role, content):
@@ -89,6 +92,7 @@ class LlmChatClear:
             clear_chat_logger = logger.bind(user=self.user)
             clear_chat_logger.info("LLM History Cleared")
         except Exception as e:
+            await self.channel.send(f"{self.user.mention} LLM Error: {e}")
             logger.info(f"LLM CLEAR HISTORY FAILURE: {e}")
 
     async def forget_history(self):
