@@ -99,7 +99,7 @@ This generates an image using the flux.dev model, which is higher quality than s
 
 ![](/assets/readme/flux_gen.png)
 
-## /mtg_gen
+## /mtg_gen, /mtg_flux_gen
 
 This generates a satire magic card based on the users prompt using a combination of the chosen sdxl model, as well as the llm specified at "mtg_llm_model" in configs/avernus.json. 
 
@@ -117,9 +117,5 @@ Same as above but generates three at a time, which is also what is triggered if 
 
 # TODO
 
-- Let a user know if a gen fails for any reason
 - add modals for slash commands
-
-
-
-
+- Add ability for cardgen to use flux

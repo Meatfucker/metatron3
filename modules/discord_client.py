@@ -8,7 +8,7 @@ from loguru import logger
 from modules.settings_loader import SettingsLoader
 from modules.avernus_client import AvernusClient
 from modules.llm_chat import LlmChat, LlmChatClear
-from modules.mtg_card import MTGCardGen, MTGCardGenThreePack
+from modules.mtg_card import MTGCardGen, MTGCardGenThreePack, MTGCardGenFlux
 from modules.sdxl import SDXLGen, SDXLGenEnhanced
 from modules.flux import FluxGen, FluxGenEnhanced
 
@@ -130,6 +130,9 @@ class Metatron3(discord.Client):
         mtg_three_pack_command = discord.app_commands.Command(name="mtg_gen_three_pack",
                                                               description="This generates three satire MTG cards",
                                                               callback=self.mtg_gen_three_pack)
+        mtx_flux_command = discord.app_commands.Command(name="mtg_flux_gen",
+                                                        description="This generates a satire Flux MTG card",
+                                                        callback=self.mtg_flux_gen)
         sdxl_command = discord.app_commands.Command(name="sdxl_gen",
                                                     description="Generate an image using SDXL",
                                                     callback=self.sdxl_gen)
@@ -143,6 +146,7 @@ class Metatron3(discord.Client):
         self.slash_commands.add_command(clear_chat_command)
         self.slash_commands.add_command(mtg_command)
         self.slash_commands.add_command(mtg_three_pack_command)
+        self.slash_commands.add_command(mtx_flux_command)
         self.slash_commands.add_command(sdxl_command)
         self.slash_commands.add_command(flux_command)
 
@@ -203,6 +207,25 @@ class Metatron3(discord.Client):
             size = await self.get_queue_depth()
             await interaction.response.send_message(
                 f"Card Being Created: {size} requests in queue ahead of you", ephemeral=True
+            )
+            await self.request_queue.put(mtg_card_request)
+        else:
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )
+
+    async def mtg_flux_gen(self, interaction: discord.Interaction, prompt: str):
+        """This is the slash command to generate a card."""
+
+        mtg_card_request = MTGCardGenFlux(self, prompt, interaction.channel, interaction.user)
+
+        if await self.is_room_in_queue(interaction.user.id):
+            card_queue_logger = logger.bind(user=interaction.user.name, prompt=prompt)
+            card_queue_logger.info(f'Flux Card Queued')
+            self.request_queue_concurrency_list[interaction.user.id] += 1
+            size = await self.get_queue_depth()
+            await interaction.response.send_message(
+                f"Flux Card Being Created: {size} requests in queue ahead of you", ephemeral=True
             )
             await self.request_queue.put(mtg_card_request)
         else:

@@ -664,3 +664,72 @@ class MTGCardGenThreePack(MTGCardGen):
             return self.card
         except Exception as e:
             logger.info(f"MTG_CARD_THREE_PACK FAILURE: {e}")
+
+class MTGCardGenFlux(MTGCardGen):
+    async def generate_card_image(self, category):
+        """Prepares the prompt and generates an image based on the card category."""
+        self.card_artist = self.get_random_artist_prompt()
+        category_prompts = {
+            'creature': f"{self.prompt}. {self.card_artist}. {self.card_title}.",
+            'spell': f"casting spell {self.prompt}. {self.card_artist}. {self.card_title}.",
+            'artifact': f"{self.prompt} artifact. {self.card_artist}. {self.card_title}."
+        }
+        generation_prompt = category_prompts.get(category)
+        try:
+            channel_settings = SettingsLoader("configs/channels")
+            lora_name = channel_settings[f"{self.channel.id}"]["flux_lora_name"]
+            lora_prompt = channel_settings[f"{self.channel.id}"]["flux_lora_prompt"]
+        except Exception as e:
+            lora_name = None
+
+        if lora_name:
+            generation_prompt = lora_prompt + generation_prompt
+            base64_image = await self.discord_client.avernus_client.flux_image(generation_prompt,
+                                                                               batch_size=1,
+                                                                               lora_name=lora_name,
+                                                                               height=512,
+                                                                               width=512)
+        else:
+            base64_image = await self.discord_client.avernus_client.flux_image(generation_prompt,
+                                                                               batch_size=1,
+                                                                               height=512,
+                                                                               width=512)
+        image = await self.base64_to_pil_images(base64_image[0])
+        resized_image = image.resize((568, 465))
+        self.card.paste(resized_image, (88, 102))
+
+
+    async def generate_land_image(self):
+        """Prepares the prompt and generates a land card image."""
+        self.card_artist = self.get_random_artist_prompt()
+        land_color_mapping = {
+            'artifact_land': f'{self.prompt} artifact structure. {self.card_artist}.',
+            'black_land': f'{self.prompt} swamp. {self.card_artist}.',
+            'blue_land': f'{self.prompt} shore. {self.card_artist}.',
+            'white_land': f'{self.prompt} field of plains. {self.card_artist}.',
+            'green_land': f'{self.prompt} forest. {self.card_artist}.',
+            'red_land': f'{self.prompt} mountains. {self.card_artist}.'
+        }
+        generation_prompt = land_color_mapping.get(self.card_type)
+        try:
+            channel_settings = SettingsLoader("configs/channels")
+            lora_name = channel_settings[f"{self.channel.id}"]["flux_lora_name"]
+            lora_prompt = channel_settings[f"{self.channel.id}"]["flux_lora_prompt"]
+        except Exception as e:
+            lora_name = None
+
+        if lora_name:
+            generation_prompt = lora_prompt + generation_prompt
+            base64_image = await self.discord_client.avernus_client.flux_image(generation_prompt,
+                                                                               batch_size=1,
+                                                                               lora_name=lora_name,
+                                                                               height=512,
+                                                                               width=512)
+        else:
+            base64_image = await self.discord_client.avernus_client.flux_image(generation_prompt,
+                                                                               batch_size=1,
+                                                                               height=512,
+                                                                               width=512)
+        image = await self.base64_to_pil_images(base64_image[0])
+        resized_image = image.resize((568, 465))
+        self.card.paste(resized_image, (88, 102))
