@@ -61,9 +61,9 @@ class Metatron3(discord.Client):
     async def process_request_queue(self):
         """Processes the request queue objects"""
         while True:
-            self.request_currently_processing = True
             queue_request = await self.request_queue.get()
             try:
+                self.request_currently_processing = True
                 await queue_request.run()
             except Exception as e:
                 self.request_queue_concurrency_list[queue_request.user.id] -= 1
@@ -83,6 +83,13 @@ class Metatron3(discord.Client):
         if self.request_queue_concurrency_list[user_id] >= user_queue_depth:
             return False
         return True
+
+    async def get_queue_depth(self):
+        if self.request_currently_processing is True:
+            size = int(self.request_queue.qsize()) + 1
+        else:
+            size = int(self.request_queue.qsize())
+        return size
 
     @staticmethod
     async def is_user_banned(user_id):
@@ -173,8 +180,9 @@ class Metatron3(discord.Client):
             clear_chat_queue_logger = logger.bind(user=interaction.user.name)
             clear_chat_queue_logger.info(f'Chat History Cleared')
             self.request_queue_concurrency_list[interaction.user.id] += 1
+            size = await self.get_queue_depth()
             await interaction.response.send_message(
-                f"Clearing chat history: {self.request_queue.qsize()} requests in queue ahead of you.", ephemeral=True
+                f"Clearing chat history: {size} requests in queue ahead of you.", ephemeral=True
             )
             await self.request_queue.put(clear_chat_request)
         else:
@@ -192,8 +200,9 @@ class Metatron3(discord.Client):
             card_queue_logger = logger.bind(user=interaction.user.name, prompt=prompt)
             card_queue_logger.info(f'Card Queued')
             self.request_queue_concurrency_list[interaction.user.id] += 1
+            size = await self.get_queue_depth()
             await interaction.response.send_message(
-                f"Card Being Created: {self.request_queue.qsize()} requests in queue ahead of you", ephemeral=True
+                f"Card Being Created: {size} requests in queue ahead of you", ephemeral=True
             )
             await self.request_queue.put(mtg_card_request)
         else:
@@ -210,8 +219,9 @@ class Metatron3(discord.Client):
             card_queue_logger = logger.bind(user=interaction.user.name, prompt=prompt)
             card_queue_logger.info(f'Card Pack Queued')
             self.request_queue_concurrency_list[interaction.user.id] += 1
+            size = await self.get_queue_depth()
             await interaction.response.send_message(
-                f"Pack Being Created: {self.request_queue.qsize()} requests in queue ahead of you", ephemeral=True
+                f"Pack Being Created: {size} requests in queue ahead of you", ephemeral=True
             )
             await self.request_queue.put(mtg_card_request)
         else:
@@ -267,8 +277,9 @@ class Metatron3(discord.Client):
             sdxl_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
             sdxl_queuelogger.info("SDXL Queued")
             self.request_queue_concurrency_list[interaction.user.id] += 1
+            size = await self.get_queue_depth()
             await interaction.response.send_message(
-                f"SDXL Image Being Created: {self.request_queue.qsize()} requests in queue ahead of you", ephemeral=True
+                f"SDXL Image Being Created: {size} requests in queue ahead of you", ephemeral=True
             )
             await self.request_queue.put(sdxl_request)
         else:
@@ -318,8 +329,9 @@ class Metatron3(discord.Client):
             flux_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
             flux_queuelogger.info("Flux Queued")
             self.request_queue_concurrency_list[interaction.user.id] += 1
+            size = await self.get_queue_depth()
             await interaction.response.send_message(
-                f"Flux Image Being Created: {self.request_queue.qsize()} requests in queue ahead of you", ephemeral=True
+                f"Flux Image Being Created: {size} requests in queue ahead of you", ephemeral=True
             )
             await self.request_queue.put(flux_request)
 

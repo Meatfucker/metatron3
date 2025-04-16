@@ -118,6 +118,7 @@ Same as above but generates three at a time, which is also what is triggered if 
 # TODO
 
 - Let a user know if a gen fails for any reason
+- add modals for slash commands
 
 
 
