@@ -733,3 +733,81 @@ class MTGCardGenFlux(MTGCardGen):
         image = await self.base64_to_pil_images(base64_image[0])
         resized_image = image.resize((568, 465))
         self.card.paste(resized_image, (88, 102))
+
+class MTGCardGenFluxThreePack(MTGCardGenFlux):
+    async def run(self):
+        """Builds a PIL image containing a card"""
+        start_time = time.time()
+        try:
+            now = datetime.now()
+            now_string = now.strftime("%Y%m%d%H%M%S")
+            sanitized_prompt = re.sub(r'[<>:"/\\|?*\x00-\x1F]', '', self.prompt)
+
+            card1 = await self.make_card()
+            dir_path_1 = f'assets/mtg_card_gen/users/{self.user}/{self.card_type}.{sanitized_prompt[:20]}.{random.randint(1, 99999999)}.webp'
+            card_path_1 = f'assets/mtg_card_gen/users/{self.user}/{now_string}/card1.webp'
+            os.makedirs(os.path.dirname(dir_path_1), exist_ok=True)
+            os.makedirs(os.path.dirname(card_path_1), exist_ok=True)
+            card1.save(dir_path_1, format="WEBP")
+            card1.save(card_path_1, format="WEBP")
+
+            card2 = await self.make_card()
+            dir_path_2 = f'assets/mtg_card_gen/users/{self.user}/{self.card_type}.{sanitized_prompt[:20]}.{random.randint(1, 99999999)}.webp'
+            card_path_2 = f'assets/mtg_card_gen/users/{self.user}/{now_string}/card2.webp'
+            os.makedirs(os.path.dirname(dir_path_2), exist_ok=True)
+            os.makedirs(os.path.dirname(card_path_2), exist_ok=True)
+            card2.save(dir_path_2, format="WEBP")
+            card2.save(card_path_2, format="WEBP")
+
+            card3 = await self.make_card()
+            dir_path_3 = f'assets/mtg_card_gen/users/{self.user}/{self.card_type}.{sanitized_prompt[:20]}.{random.randint(1, 99999999)}.webp'
+            card_path_3 = f'assets/mtg_card_gen/users/{self.user}/{now_string}/card3.webp'
+            os.makedirs(os.path.dirname(dir_path_3), exist_ok=True)
+            os.makedirs(os.path.dirname(card_path_3), exist_ok=True)
+            card3.save(dir_path_3, format="WEBP")
+            card3.save(card_path_3, format="WEBP")
+
+            if self.settings["discord"]["mtg_gen_three_pack_send_link"]:
+                message = await self.channel.send(f"# `{self.user}` [OPEN PACK](http://theblackgoat.net/cardflip-dynamic.html?username={self.user}&datetimestring={now_string})")
+                message_link = f"https://discord.com/channels/{message.guild.id}/{message.channel.id}/{message.id}"
+                lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt, link=message_link)
+            else:
+                lightycard_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            await self.channel.send(
+                content=f"Card Pack for `{self.user}`: Prompt: `{self.prompt}` Time:`{elapsed_time:.2f} seconds`",
+                files=[discord.File(dir_path_1, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True),
+                       discord.File(dir_path_2, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True),
+                       discord.File(dir_path_3, filename=f'lighty_mtg_{self.prompt[:20]}.png', spoiler=True)]
+            )
+
+            lightycard_logger.info("Card Pack Success")
+        except Exception as e:
+            await self.channel.send(f"{self.user.mention} MTG Error: {e}")
+            mtg_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            mtg_logger.error(f"MTG FLUX ERROR: {e}")
+
+    async def make_card(self):
+        try:
+            self.card_primary_mana = random.choice(range(1, 5))
+            self.card_secondary_mana = random.choice(range(0, 5))
+            self.choose_card_type()
+            self.load_card_template()
+            card_build_methods = {
+                'creature': self.build_creature_card,
+                'land': self.build_land_card,
+                'instant': self.build_instant_card,
+                'sorcery': self.build_sorcery_card,
+                'artifact': self.build_artifact_card,
+                'enchant': self.build_enchant_card,
+            }
+
+            for card_category, build_method in card_build_methods.items():
+                if self.is_card_type(card_category):
+                    await build_method()
+                    break  # Only one type should match, so we stop after the first
+
+            return self.card
+        except Exception as e:
+            logger.info(f"MTG_CARD_FLUX_THREE_PACK FAILURE: {e}")

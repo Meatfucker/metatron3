@@ -116,6 +116,3 @@ Same as above but generates three at a time, which is also what is triggered if 
 ![](/assets/readme/mtg_gen_three_pack.png)
 
 # TODO
-
-- add modals for slash commands
-- Add ability for cardgen to use flux

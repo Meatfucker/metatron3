@@ -191,30 +191,29 @@ class FluxButtons(discord.ui.View):
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Rerolls last Flux gen"""
-        if self.user.id == interaction.user.id:
-            if await self.discord_client.is_room_in_queue(self.user.id):
-                flux_request = FluxGen(self.discord_client,
-                                       self.prompt,
-                                       self.channel,
-                                       self.user,
-                                       width=self.width,
-                                       height=self.height,
-                                       batch_size=self.batch_size,
-                                       lora_name=self.lora_name,
-                                       i2i_image=self.i2i_image,
-                                       strength=self.strength)
-                await interaction.response.send_message(
-                    f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
-                    ephemeral=True
-                )
-                flux_queuelogger = logger.bind(user=self.user.name, prompt=self.prompt)
-                flux_queuelogger.info("Flux Queued")
-                self.discord_client.request_queue_concurrency_list[self.user.id] += 1
-                await self.discord_client.request_queue.put(flux_request)
-            else:
-                await interaction.response.send_message(
-                    "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
-                )
+        if await self.discord_client.is_room_in_queue(interaction.user.id):
+            flux_request = FluxGen(self.discord_client,
+                                   self.prompt,
+                                   self.channel,
+                                   interaction.user,
+                                   width=self.width,
+                                   height=self.height,
+                                   batch_size=self.batch_size,
+                                   lora_name=self.lora_name,
+                                   i2i_image=self.i2i_image,
+                                   strength=self.strength)
+            await interaction.response.send_message(
+                f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
+                ephemeral=True
+            )
+            flux_queuelogger = logger.bind(user=interaction.user.name, prompt=self.prompt)
+            flux_queuelogger.info("Flux Queued")
+            self.discord_client.request_queue_concurrency_list[interaction.user.id] += 1
+            await self.discord_client.request_queue.put(flux_request)
+        else:
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )
 
     @discord.ui.button(label='Mail', emoji="✉", style=discord.ButtonStyle.grey)
     async def dmimage(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -245,27 +244,26 @@ class FluxEnhancedButtons(FluxButtons):
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Rerolls last flux enhanced gen"""
-        if self.user.id == interaction.user.id:
-            if await self.discord_client.is_room_in_queue(self.user.id):
-                flux_request = FluxGenEnhanced(self.discord_client,
-                                               self.prompt,
-                                               self.channel,
-                                               self.user,
-                                               width=self.width,
-                                               height=self.height,
-                                               batch_size=self.batch_size,
-                                               lora_name=self.lora_name,
-                                               i2i_image=self.i2i_image,
-                                               strength=self.strength)
-                await interaction.response.send_message(
-                    f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
-                    ephemeral=True
-                )
-                flux_queuelogger = logger.bind(user=self.user.name, prompt=self.prompt)
-                flux_queuelogger.info("Flux Queued")
-                self.discord_client.request_queue_concurrency_list[self.user.id] += 1
-                await self.discord_client.request_queue.put(flux_request)
-            else:
-                await interaction.response.send_message(
-                    "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
-                )
+        if await self.discord_client.is_room_in_queue(interaction.user.id):
+            flux_request = FluxGenEnhanced(self.discord_client,
+                                           self.prompt,
+                                           self.channel,
+                                           interaction.user,
+                                           width=self.width,
+                                           height=self.height,
+                                           batch_size=self.batch_size,
+                                           lora_name=self.lora_name,
+                                           i2i_image=self.i2i_image,
+                                           strength=self.strength)
+            await interaction.response.send_message(
+                f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
+                ephemeral=True
+            )
+            flux_queuelogger = logger.bind(user=interaction.user.name, prompt=self.prompt)
+            flux_queuelogger.info("Flux Queued")
+            self.discord_client.request_queue_concurrency_list[interaction.user.id] += 1
+            await self.discord_client.request_queue.put(flux_request)
+        else:
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )
