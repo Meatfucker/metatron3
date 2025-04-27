@@ -269,7 +269,7 @@ class SDXLEnhancedButtons(SDXLButtons):
             sdxl_request = SDXLGenEnhanced(self.discord_client,
                                            self.prompt,
                                            self.channel,
-                                           self.interaction.user,
+                                           interaction.user,
                                            negative_prompt=self.negative_prompt,
                                            width=self.width,
                                            height=self.height,
