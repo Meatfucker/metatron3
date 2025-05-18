@@ -21,7 +21,12 @@ class SDXLGen:
                  batch_size=None,
                  model_name=None,
                  i2i_image=None,
-                 strength=None):
+                 strength=None,
+                 ipadapter_image=None,
+                 ipadapter_strength=None,
+                 control_processor=None,
+                 control_image=None,
+                 control_strength=None):
         self.settings = SettingsLoader("configs")
         self.discord_client = discord_client
         self.avernus_client = discord_client.avernus_client
@@ -39,6 +44,13 @@ class SDXLGen:
         self.i2i_image = i2i_image
         self.i2i_image_base64 = None
         self.strength = strength
+        self.ipadapter_image = ipadapter_image
+        self.ipadapter_image_base64 = None
+        self.ipadapter_strength = ipadapter_strength
+        self.control_processor = control_processor
+        self.control_image = control_image
+        self.control_image_base64 = None
+        self.control_strength = control_strength
 
     async def run(self):
         start_time = time.time()
@@ -64,26 +76,47 @@ class SDXLGen:
                 kwargs["image"] = self.i2i_image_base64
             if self.strength:
                 kwargs["strength"] = self.strength
+            if self.ipadapter_image:
+                self.ipadapter_image_base64 = await self.image_to_base64(self.ipadapter_image, kwargs["width"], kwargs["height"])
+                kwargs["ip_adapter_image"] = self.ipadapter_image_base64
+            if self.ipadapter_strength:
+                kwargs["ip_adapter_strength"] = self.ipadapter_strength
+            if self.control_image:
+                self.control_image_base64 = await self.image_to_base64(self.control_image, kwargs["width"], kwargs["height"])
+                kwargs["controlnet_image"] = self.control_image_base64
+            if self.control_processor:
+                kwargs["controlnet_processor"] = self.control_processor
+            if self.control_strength:
+                kwargs["controlnet_strength"] = self.control_strength
+
             base64_images = await self.avernus_client.sdxl_image(**kwargs)
             images = await self.base64_to_pil_images(base64_images)
             files = await self.images_to_discord_files(images)
             end_time = time.time()
             elapsed_time = end_time - start_time
-            await self.channel.send(
-                content=f"SDXL Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
-                files=files,
-                view=SDXLButtons(self.discord_client,
-                                 self.prompt,
-                                 self.channel,
-                                 self.user,
-                                 self.width,
-                                 self.height,
-                                 self.negative_prompt,
-                                 self.lora_name,
-                                 self.model_name,
-                                 self.i2i_image,
-                                 self.strength,
-                                 self.batch_size))
+            try:
+                await self.channel.send(
+                    content=f"SDXL Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
+                    files=files,
+                    view=SDXLButtons(discord_client=self.discord_client,
+                                     prompt=self.prompt,
+                                     channel=self.channel,
+                                     user=self.user,
+                                     width=self.width,
+                                     height=self.height,
+                                     negative_prompt=self.negative_prompt,
+                                     lora_name=self.lora_name,
+                                     model_name=self.model_name,
+                                     i2i_image=self.i2i_image,
+                                     strength=self.strength,
+                                     batch_size=self.batch_size,
+                                     ipadapter_image=self.ipadapter_image,
+                                     ipadapter_strength=self.ipadapter_strength,
+                                     control_image=self.control_image,
+                                     control_processor=self.control_processor,
+                                     control_strength=self.control_strength))
+            except Exception as e:
+                logger.error(f"CHANNEL SEND ERROR: {e}")
             sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
             sdxl_logger.info("SDXL Success")
         except Exception as e:
@@ -149,6 +182,19 @@ class SDXLGenEnhanced(SDXLGen):
                 kwargs["image"] = self.i2i_image_base64
             if self.strength:
                 kwargs["strength"] = self.strength
+            if self.ipadapter_image:
+                self.ipadapter_image_base64 = await self.image_to_base64(self.ipadapter_image, kwargs["width"], kwargs["height"])
+                kwargs["ip_adapter_image"] = self.ipadapter_image_base64
+            if self.ipadapter_strength:
+                kwargs["ip_adapter_strength"] = self.ipadapter_strength
+            if self.control_image:
+                self.control_image_base64 = await self.image_to_base64(self.control_image, kwargs["width"], kwargs["height"])
+                kwargs["controlnet_image"] = self.control_image_base64
+            if self.control_processor:
+                kwargs["controlnet_processor"] = self.control_processor
+            if self.control_strength:
+                kwargs["controlnet_strength"] = self.control_strength
+
             base64_images = await self.avernus_client.sdxl_image(**kwargs)
             images = await self.base64_to_pil_images(base64_images)
             files = await self.images_to_discord_files(images)
@@ -157,18 +203,23 @@ class SDXLGenEnhanced(SDXLGen):
             await self.channel.send(
                 content=f"SDXL Gen for:`{self.user}` Prompt:`{self.prompt}` Enhanced Prompt:`{enhanced_prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
                 files=files,
-                view=SDXLEnhancedButtons(self.discord_client,
-                                         self.prompt,
-                                         self.channel,
-                                         self.user,
-                                         self.width,
-                                         self.height,
-                                         self.negative_prompt,
-                                         self.lora_name,
-                                         self.model_name,
-                                         self.i2i_image,
-                                         self.strength,
-                                         self.batch_size))
+                view=SDXLEnhancedButtons(discord_client=self.discord_client,
+                                         prompt=self.prompt,
+                                         channel=self.channel,
+                                         user=self.user,
+                                         width=self.width,
+                                         height=self.height,
+                                         negative_prompt=self.negative_prompt,
+                                         lora_name=self.lora_name,
+                                         model_name=self.model_name,
+                                         i2i_image=self.i2i_image,
+                                         strength=self.strength,
+                                         batch_size=self.batch_size,
+                                         ipadapter_image=self.ipadapter_image,
+                                         ipadapter_strength=self.ipadapter_strength,
+                                         control_image=self.control_image,
+                                         control_processor=self.control_processor,
+                                         control_strength=self.control_strength))
             sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
             sdxl_logger.info("SDXL Success")
         except Exception as e:
@@ -191,7 +242,12 @@ class SDXLButtons(discord.ui.View):
                  model_name=None,
                  i2i_image=None,
                  strength=None,
-                 batch_size=4):
+                 batch_size=4,
+                 ipadapter_image=None,
+                 ipadapter_strength=None,
+                 control_processor=None,
+                 control_image=None,
+                 control_strength=None):
         super().__init__()
         self.timeout = None  # Disables the timeout on the buttons
         self.discord_client = discord_client
@@ -206,6 +262,11 @@ class SDXLButtons(discord.ui.View):
         self.model_name = model_name
         self.i2i_image = i2i_image
         self.strength = strength
+        self.ipadapter_image = ipadapter_image
+        self.ipadapter_strength = ipadapter_strength
+        self.control_processor = control_processor
+        self.control_image = control_image
+        self.control_strength = control_strength
 
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -222,7 +283,12 @@ class SDXLButtons(discord.ui.View):
                                    lora_name=self.lora_name,
                                    model_name=self.model_name,
                                    i2i_image=self.i2i_image,
-                                   strength=self.strength)
+                                   strength=self.strength,
+                                   ipadapter_image=self.ipadapter_image,
+                                   ipadapter_strength=self.ipadapter_strength,
+                                   control_image=self.control_image,
+                                   control_processor=self.control_processor,
+                                   control_strength=self.control_strength)
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
                 ephemeral=True
@@ -277,7 +343,12 @@ class SDXLEnhancedButtons(SDXLButtons):
                                            lora_name=self.lora_name,
                                            model_name=self.model_name,
                                            i2i_image=self.i2i_image,
-                                           strength=self.strength)
+                                           strength=self.strength,
+                                           ipadapter_image=self.ipadapter_image,
+                                           ipadapter_strength=self.ipadapter_strength,
+                                           control_image=self.control_image,
+                                           control_processor=self.control_processor,
+                                           control_strength=self.control_strength)
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
                 ephemeral=True

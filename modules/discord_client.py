@@ -27,8 +27,10 @@ class Metatron3(discord.Client):
         self.allowed_mentions: discord.AllowedMentions = discord.AllowedMentions(everyone=False, replied_user=True, users=True)
         self.sd_xl_models_choices: list = []
         self.sd_xl_loras_choices: list = []
+        self.sd_xl_controlnet_choices: list = []
         self.flux_loras_choices: list = []
-        
+        self.flux_controlnet_choices: list = []
+
     async def setup_hook(self):
         """This loads the various shit before logging in to discord"""
         avernus_status = await self.avernus_client.check_status()
@@ -109,9 +111,17 @@ class Metatron3(discord.Client):
         for lora in sd_xl_loras_list:
             self.sd_xl_loras_choices.append(discord.app_commands.Choice(name=lora, value=lora))
 
+        sd_xl_controlnets_list = await self.avernus_client.list_sdxl_controlnets()
+        for controlnet in sd_xl_controlnets_list:
+            self.sd_xl_controlnet_choices.append(discord.app_commands.Choice(name=controlnet, value=controlnet))
+
         flux_loras_list = await self.avernus_client.list_flux_loras()  # get the list of available loras to build the interface with
         for lora in flux_loras_list:
             self.flux_loras_choices.append(discord.app_commands.Choice(name=lora, value=lora))
+
+        flux_controlnets_list = await self.avernus_client.list_flux_controlnets()
+        for controlnet in flux_controlnets_list:
+            self.flux_controlnet_choices.append(discord.app_commands.Choice(name=controlnet, value=controlnet))
 
         for model in self.settings["avernus"]["sdxl_models_list"]:
             self.sd_xl_models_choices.append(discord.app_commands.Choice(name=model, value=model))
@@ -141,10 +151,12 @@ class Metatron3(discord.Client):
                                                     callback=self.sdxl_gen)
         sdxl_command._params["model_name"].choices = self.sd_xl_models_choices
         sdxl_command._params["lora_name"].choices = self.sd_xl_loras_choices
+        sdxl_command._params["control_processor"].choices = self.sd_xl_controlnet_choices
         flux_command = discord.app_commands.Command(name="flux_gen",
                                                     description="Generate an image using Flux",
                                                     callback=self.flux_gen)
         flux_command._params["lora_name"].choices = self.flux_loras_choices
+        flux_command._params["control_processor"].choices = self.flux_controlnet_choices
         self.slash_commands.add_command(toggle_user_ban_command)
         self.slash_commands.add_command(clear_chat_command)
         self.slash_commands.add_command(mtg_command)
@@ -286,10 +298,23 @@ class Metatron3(discord.Client):
                        model_name: Optional[str],
                        i2i_image: Optional[discord.Attachment],
                        i2i_strength: Optional[float],
+                       ipadapter_image: Optional[discord.Attachment],
+                       ipadapter_strength: Optional[float],
+                       control_processor: Optional[str],
+                       control_image: Optional[discord.Attachment],
+                       control_strength: Optional[float],
                        batch_size: Optional[int] = 4,):
         """This is the slash command to generate SDXL images"""
         if i2i_image:
             if "image" not in i2i_image.content_type:
+                await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
+                return
+        if ipadapter_image:
+            if "image" not in ipadapter_image.content_type:
+                await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
+                return
+        if control_image:
+            if "image" not in control_image.content_type:
                 await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
                 return
         if enhance_prompt:
@@ -304,7 +329,12 @@ class Metatron3(discord.Client):
                                            lora_name=lora_name,
                                            model_name=model_name,
                                            i2i_image=i2i_image,
-                                           strength=i2i_strength)
+                                           strength=i2i_strength,
+                                           ipadapter_image=ipadapter_image,
+                                           ipadapter_strength=ipadapter_strength,
+                                           control_processor=control_processor,
+                                           control_image=control_image,
+                                           control_strength=control_strength)
         else:
             sdxl_request = SDXLGen(self,
                                    prompt,
@@ -317,7 +347,12 @@ class Metatron3(discord.Client):
                                    lora_name=lora_name,
                                    model_name=model_name,
                                    i2i_image=i2i_image,
-                                   strength=i2i_strength)
+                                   strength=i2i_strength,
+                                   ipadapter_image=ipadapter_image,
+                                   ipadapter_strength=ipadapter_strength,
+                                   control_processor=control_processor,
+                                   control_image=control_image,
+                                   control_strength=control_strength)
 
         if await self.is_room_in_queue(interaction.user.id):
             sdxl_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
@@ -342,10 +377,22 @@ class Metatron3(discord.Client):
                        enhance_prompt: Optional[bool],
                        i2i_image: Optional[discord.Attachment],
                        i2i_strength: Optional[float],
+                      # ipadapter_image: Optional[discord.Attachment],
+                      # ipadapter_strength: Optional[float],
+                       control_processor: Optional[str],
+                       control_image: Optional[discord.Attachment],
                        batch_size: Optional[int] = 4):
         """This is the slash command to generate Flux images"""
         if i2i_image:
             if "image" not in i2i_image.content_type:
+                await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
+                return
+        #if ipadapter_image:
+        #    if "image" not in ipadapter_image.content_type:
+        #        await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
+        #        return
+        if control_image:
+            if "image" not in control_image.content_type:
                 await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
                 return
         if enhance_prompt:
@@ -358,7 +405,11 @@ class Metatron3(discord.Client):
                                            batch_size=batch_size,
                                            lora_name=lora_name,
                                            i2i_image=i2i_image,
-                                           strength=i2i_strength)
+                                           strength=i2i_strength,
+                                          # ipadapter_image=ipadapter_image,
+                                          # ipadapter_strength=ipadapter_strength,
+                                           control_processor=control_processor,
+                                           control_image=control_image)
         else:
             flux_request = FluxGen(self,
                                    prompt,
@@ -369,7 +420,11 @@ class Metatron3(discord.Client):
                                    batch_size=batch_size,
                                    lora_name=lora_name,
                                    i2i_image=i2i_image,
-                                   strength=i2i_strength)
+                                   strength=i2i_strength,
+                                  # ipadapter_image=ipadapter_image,
+                                  # ipadapter_strength=ipadapter_strength,
+                                   control_processor=control_processor,
+                                   control_image=control_image)
 
         if await self.is_room_in_queue(interaction.user.id):
             flux_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)

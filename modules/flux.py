@@ -19,7 +19,11 @@ class FluxGen:
                  lora_name=None,
                  batch_size=None,
                  i2i_image=None,
-                 strength=None):
+                 strength=None,
+                 ipadapter_image=None,
+                 ipadapter_strength=None,
+                 control_processor=None,
+                 control_image=None):
         self.settings = SettingsLoader("configs")
         self.discord_client = discord_client
         self.avernus_client = discord_client.avernus_client
@@ -35,6 +39,13 @@ class FluxGen:
         self.i2i_image = i2i_image
         self.i2i_image_base64 = None
         self.strength = strength
+        self.ipadapter_image = ipadapter_image
+        self.ipadapter_image_base64 = None
+        self.ipadapter_strength = ipadapter_strength
+        self.control_processor = control_processor
+        self.control_image = control_image
+        self.control_image_base64 = None
+
 
     async def run(self):
         start_time = time.time()
@@ -57,26 +68,44 @@ class FluxGen:
                 kwargs["image"] = self.i2i_image_base64
             if self.strength:
                 kwargs["strength"] = self.strength
+            if self.ipadapter_image:
+                self.ipadapter_image_base64 = await self.image_to_base64(self.ipadapter_image, kwargs["width"], kwargs["height"])
+                kwargs["ip_adapter_image"] = self.ipadapter_image_base64
+            if self.ipadapter_strength:
+                kwargs["ip_adapter_strength"] = self.ipadapter_strength
+            if self.control_image:
+                self.control_image_base64 = await self.image_to_base64(self.control_image, kwargs["width"], kwargs["height"])
+                kwargs["controlnet_image"] = self.control_image_base64
+            if self.control_processor:
+                kwargs["controlnet_processor"] = self.control_processor
+
             base64_images = await self.avernus_client.flux_image(**kwargs)
             images = await self.base64_to_pil_images(base64_images)
             files = await self.images_to_discord_files(images)
             end_time = time.time()
             elapsed_time = end_time - start_time
-            await self.channel.send(
-                content=f"Flux Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora:`{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
-                files=files,
-                view=FluxButtons(self.discord_client,
-                                 self.prompt,
-                                 self.channel,
-                                 self.user,
-                                 self.width,
-                                 self.height,
-                                 self.lora_name,
-                                 self.i2i_image,
-                                 self.strength,
-                                 self.batch_size))
-            flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-            flux_logger.info("Flux Success")
+            try:
+                await self.channel.send(
+                    content=f"Flux Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
+                    files=files,
+                    view=FluxButtons(discord_client=self.discord_client,
+                                     prompt=self.prompt,
+                                     channel=self.channel,
+                                     user=self.user,
+                                     width=self.width,
+                                     height=self.height,
+                                     lora_name=self.lora_name,
+                                     i2i_image=self.i2i_image,
+                                     strength=self.strength,
+                                     batch_size=self.batch_size,
+                                     ipadapter_image=self.ipadapter_image,
+                                     ipadapter_strength=self.ipadapter_strength,
+                                     control_image=self.control_image,
+                                     control_processor=self.control_processor))
+            except Exception as e:
+                logger.error(f"CHANNEL SEND ERROR: {e}")
+            sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            sdxl_logger.info("SDXL Success")
         except Exception as e:
             await self.channel.send(f"{self.user.mention} Flux Error: {e}")
             flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
@@ -136,6 +165,17 @@ class FluxGenEnhanced(FluxGen):
                 kwargs["image"] = self.i2i_image_base64
             if self.strength:
                 kwargs["strength"] = self.strength
+            if self.ipadapter_image:
+                self.ipadapter_image_base64 = await self.image_to_base64(self.ipadapter_image, kwargs["width"], kwargs["height"])
+                kwargs["ip_adapter_image"] = self.ipadapter_image_base64
+            if self.ipadapter_strength:
+                kwargs["ip_adapter_strength"] = self.ipadapter_strength
+            if self.control_image:
+                self.control_image_base64 = await self.image_to_base64(self.control_image, kwargs["width"], kwargs["height"])
+                kwargs["controlnet_image"] = self.control_image_base64
+            if self.control_processor:
+                kwargs["controlnet_processor"] = self.control_processor
+
             base64_images = await self.avernus_client.flux_image(**kwargs)
             images = await self.base64_to_pil_images(base64_images)
             files = await self.images_to_discord_files(images)
@@ -144,17 +184,20 @@ class FluxGenEnhanced(FluxGen):
             await self.channel.send(
                 content=f"Flux Gen for: {self.user.mention} Prompt:`{self.prompt}` Enhanced Prompt:`{enhanced_prompt}` Lora:`{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
                 files=files,
-                view=FluxEnhancedButtons(self.discord_client,
-                                         self.prompt,
-                                         self.channel,
-                                         self.user,
-                                         self.width,
-                                         self.height,
-                                         self.lora_name,
-                                         self.i2i_image,
-                                         self.strength,
-                                         self.batch_size))
-
+                view=FluxEnhancedButtons(discord_client=self.discord_client,
+                                         prompt=self.prompt,
+                                         channel=self.channel,
+                                         user=self.user,
+                                         width=self.width,
+                                         height=self.height,
+                                         lora_name=self.lora_name,
+                                         i2i_image=self.i2i_image,
+                                         strength=self.strength,
+                                         batch_size=self.batch_size,
+                                         ipadapter_image=self.ipadapter_image,
+                                         ipadapter_strength=self.ipadapter_strength,
+                                         control_image=self.control_image,
+                                         control_processor=self.control_processor))
             sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
             sdxl_logger.info("Flux Success")
         except Exception as e:
@@ -174,7 +217,11 @@ class FluxButtons(discord.ui.View):
                  lora_name=None,
                  i2i_image=None,
                  strength=None,
-                 batch_size=4):
+                 batch_size=4,
+                 ipadapter_image=None,
+                 ipadapter_strength=None,
+                 control_processor=None,
+                 control_image=None):
         super().__init__()
         self.timeout = None  # Disables the timeout on the buttons
         self.discord_client = discord_client
@@ -187,6 +234,10 @@ class FluxButtons(discord.ui.View):
         self.batch_size = batch_size
         self.i2i_image = i2i_image
         self.strength = strength
+        self.ipadapter_image = ipadapter_image
+        self.ipadapter_strength = ipadapter_strength
+        self.control_processor = control_processor
+        self.control_image = control_image
 
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -201,7 +252,12 @@ class FluxButtons(discord.ui.View):
                                    batch_size=self.batch_size,
                                    lora_name=self.lora_name,
                                    i2i_image=self.i2i_image,
-                                   strength=self.strength)
+                                   strength=self.strength,
+                                   ipadapter_image=self.ipadapter_image,
+                                   ipadapter_strength=self.ipadapter_strength,
+                                   control_image=self.control_image,
+                                   control_processor=self.control_processor,
+                                   )
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
                 ephemeral=True
@@ -254,7 +310,11 @@ class FluxEnhancedButtons(FluxButtons):
                                            batch_size=self.batch_size,
                                            lora_name=self.lora_name,
                                            i2i_image=self.i2i_image,
-                                           strength=self.strength)
+                                           strength=self.strength,
+                                           ipadapter_image=self.ipadapter_image,
+                                           ipadapter_strength=self.ipadapter_strength,
+                                           control_image=self.control_image,
+                                           control_processor=self.control_processor)
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
                 ephemeral=True

@@ -19,12 +19,18 @@ class LlmChat:
     async def run(self):
         start_time = time.time()
         try:
+            rag_results = await self.discord_client.avernus_client.rag_retrieve(self.prompt)
+            logger.info(rag_results)
+            combined_rag_result = ""
+            for result in rag_results:
+                combined_rag_result = combined_rag_result + result + " . "
+            self.rag_prompt = self.prompt + f". The following information was retrieved by RAG for supplemental information to the previous sentence. Only consider this information if its directly relevant to the chat: {combined_rag_result}"
             history = await self.get_history()
             if history is None:
-                response = await self.discord_client.avernus_client.llm_chat(self.prompt,
+                response = await self.discord_client.avernus_client.llm_chat(self.rag_prompt,
                                                                          self.settings["avernus"]["llm_model"])
             else:
-                response = await self.discord_client.avernus_client.llm_chat(self.prompt,
+                response = await self.discord_client.avernus_client.llm_chat(self.rag_prompt,
                                                                              self.settings["avernus"]["llm_model"],
                                                                              history)
             await self.add_history("user", self.prompt)
