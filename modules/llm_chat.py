@@ -24,7 +24,10 @@ class LlmChat:
             combined_rag_result = ""
             for result in rag_results:
                 combined_rag_result = combined_rag_result + result + " . "
-            self.rag_prompt = self.prompt + f". The following information was retrieved by RAG for supplemental information to the previous sentence. Only consider this information if its directly relevant to the chat: {combined_rag_result}"
+            if combined_rag_result is not "":
+                self.rag_prompt = self.prompt + f". The following information was retrieved by RAG for supplemental information to the previous sentence. Only consider this information if its directly relevant to the chat: {combined_rag_result}"
+            else:
+                self.rag_prompt = self.prompt
             history = await self.get_history()
             if history is None:
                 response = await self.discord_client.avernus_client.llm_chat(self.rag_prompt,
