@@ -190,7 +190,6 @@ class FluxGenEnhanced(FluxGen):
 
 class FluxKontextGen:
     """This is the queue object for flux generations"""
-
     def __init__(self,
                  discord_client,
                  prompt,
@@ -260,18 +259,18 @@ class FluxKontextGen:
                 await self.channel.send(
                     content=f"Flux Kontext Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
                     files=files,
-                    view=FluxButtons(discord_client=self.discord_client,
-                                     prompt=self.prompt,
-                                     channel=self.channel,
-                                     user=self.user,
-                                     width=self.width,
-                                     height=self.height,
-                                     lora_name=self.lora_name,
-                                     i2i_image=self.i2i_image,
-                                     strength=self.strength,
-                                     batch_size=self.batch_size,
-                                     ipadapter_image=self.ipadapter_image,
-                                     ipadapter_strength=self.ipadapter_strength))
+                    view=FluxKontextButtons(discord_client=self.discord_client,
+                                            prompt=self.prompt,
+                                            channel=self.channel,
+                                            user=self.user,
+                                            width=self.width,
+                                            height=self.height,
+                                            lora_name=self.lora_name,
+                                            i2i_image=self.i2i_image,
+                                            strength=self.strength,
+                                            batch_size=self.batch_size,
+                                            ipadapter_image=self.ipadapter_image,
+                                            ipadapter_strength=self.ipadapter_strength))
             except Exception as e:
                 logger.error(f"CHANNEL SEND ERROR: {e}")
             sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
@@ -415,6 +414,37 @@ class FluxEnhancedButtons(FluxButtons):
                                            ipadapter_image=self.ipadapter_image,
                                            ipadapter_strength=self.ipadapter_strength,
                                            )
+            await interaction.response.send_message(
+                f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
+                ephemeral=True
+            )
+            flux_queuelogger = logger.bind(user=interaction.user.name, prompt=self.prompt)
+            flux_queuelogger.info("Flux Queued")
+            self.discord_client.request_queue_concurrency_list[interaction.user.id] += 1
+            await self.discord_client.request_queue.put(flux_request)
+        else:
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )
+
+class FluxKontextButtons(FluxButtons):
+    """Class for the Flux Kontext buttons"""
+    @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
+    async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Rerolls last Flux gen"""
+        if await self.discord_client.is_room_in_queue(interaction.user.id):
+            flux_request = FluxKontextGen(self.discord_client,
+                                          self.prompt,
+                                          self.channel,
+                                          interaction.user,
+                                          width=self.width,
+                                          height=self.height,
+                                          batch_size=self.batch_size,
+                                          lora_name=self.lora_name,
+                                          i2i_image=self.i2i_image,
+                                          strength=self.strength,
+                                          ipadapter_image=self.ipadapter_image,
+                                          ipadapter_strength=self.ipadapter_strength)
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
                 ephemeral=True
