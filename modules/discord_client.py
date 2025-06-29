@@ -10,7 +10,7 @@ from modules.avernus_client import AvernusClient
 from modules.llm_chat import LlmChat, LlmChatClear
 from modules.mtg_card import MTGCardGen, MTGCardGenThreePack, MTGCardGenFlux, MTGCardGenFluxThreePack
 from modules.sdxl import SDXLGen, SDXLGenEnhanced
-from modules.flux import FluxGen, FluxGenEnhanced
+from modules.flux import FluxGen, FluxGenEnhanced, FluxKontextGen
 
 
 # noinspection PyUnresolvedReferences
@@ -29,7 +29,6 @@ class Metatron3(discord.Client):
         self.sd_xl_loras_choices: list = []
         self.sd_xl_controlnet_choices: list = []
         self.flux_loras_choices: list = []
-        self.flux_controlnet_choices: list = []
 
     async def setup_hook(self):
         """This loads the various shit before logging in to discord"""
@@ -119,10 +118,6 @@ class Metatron3(discord.Client):
         for lora in flux_loras_list:
             self.flux_loras_choices.append(discord.app_commands.Choice(name=lora, value=lora))
 
-        flux_controlnets_list = await self.avernus_client.list_flux_controlnets()
-        for controlnet in flux_controlnets_list:
-            self.flux_controlnet_choices.append(discord.app_commands.Choice(name=controlnet, value=controlnet))
-
         for model in self.settings["avernus"]["sdxl_models_list"]:
             self.sd_xl_models_choices.append(discord.app_commands.Choice(name=model, value=model))
 
@@ -156,7 +151,10 @@ class Metatron3(discord.Client):
                                                     description="Generate an image using Flux",
                                                     callback=self.flux_gen)
         flux_command._params["lora_name"].choices = self.flux_loras_choices
-        flux_command._params["control_processor"].choices = self.flux_controlnet_choices
+        kontext_command = discord.app_commands.Command(name="kontext_gen",
+                                                    description="Edit an image using Kontext",
+                                                    callback=self.kontext_gen)
+        kontext_command._params["lora_name"].choices = self.flux_loras_choices
         self.slash_commands.add_command(toggle_user_ban_command)
         self.slash_commands.add_command(clear_chat_command)
         self.slash_commands.add_command(mtg_command)
@@ -165,6 +163,7 @@ class Metatron3(discord.Client):
         self.slash_commands.add_command(mtg_flux_three_pack_command)
         self.slash_commands.add_command(sdxl_command)
         self.slash_commands.add_command(flux_command)
+        self.slash_commands.add_command(kontext_command)
 
     @staticmethod
     async def toggle_user_ban(interaction: discord.Interaction, user_id: str):
@@ -377,24 +376,19 @@ class Metatron3(discord.Client):
                        enhance_prompt: Optional[bool],
                        i2i_image: Optional[discord.Attachment],
                        i2i_strength: Optional[float],
-                      # ipadapter_image: Optional[discord.Attachment],
-                      # ipadapter_strength: Optional[float],
-                       control_processor: Optional[str],
-                       control_image: Optional[discord.Attachment],
+                       ipadapter_image: Optional[discord.Attachment],
+                       ipadapter_strength: Optional[float],
                        batch_size: Optional[int] = 4):
         """This is the slash command to generate Flux images"""
         if i2i_image:
             if "image" not in i2i_image.content_type:
                 await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
                 return
-        #if ipadapter_image:
-        #    if "image" not in ipadapter_image.content_type:
-        #        await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
-        #        return
-        if control_image:
-            if "image" not in control_image.content_type:
+        if ipadapter_image:
+            if "image" not in ipadapter_image.content_type:
                 await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
                 return
+
         if enhance_prompt:
             flux_request = FluxGenEnhanced(self,
                                            prompt,
@@ -406,10 +400,8 @@ class Metatron3(discord.Client):
                                            lora_name=lora_name,
                                            i2i_image=i2i_image,
                                            strength=i2i_strength,
-                                          # ipadapter_image=ipadapter_image,
-                                          # ipadapter_strength=ipadapter_strength,
-                                           control_processor=control_processor,
-                                           control_image=control_image)
+                                           ipadapter_image=ipadapter_image,
+                                           ipadapter_strength=ipadapter_strength)
         else:
             flux_request = FluxGen(self,
                                    prompt,
@@ -421,10 +413,8 @@ class Metatron3(discord.Client):
                                    lora_name=lora_name,
                                    i2i_image=i2i_image,
                                    strength=i2i_strength,
-                                  # ipadapter_image=ipadapter_image,
-                                  # ipadapter_strength=ipadapter_strength,
-                                   control_processor=control_processor,
-                                   control_image=control_image)
+                                   ipadapter_image=ipadapter_image,
+                                   ipadapter_strength=ipadapter_strength)
 
         if await self.is_room_in_queue(interaction.user.id):
             flux_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
@@ -433,6 +423,55 @@ class Metatron3(discord.Client):
             size = await self.get_queue_depth()
             await interaction.response.send_message(
                 f"Flux Image Being Created: {size} requests in queue ahead of you", ephemeral=True
+            )
+            await self.request_queue.put(flux_request)
+
+        else:
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )
+
+    async def kontext_gen(self,
+                          interaction: discord.Interaction,
+                          prompt: str,
+                          i2i_image: discord.Attachment,
+                          width: Optional[int],
+                          height: Optional[int],
+                          lora_name: Optional[str],
+                          i2i_strength: Optional[float],
+                          ipadapter_image: Optional[discord.Attachment],
+                          ipadapter_strength: Optional[float],
+                          batch_size: Optional[int] = 4):
+        """This is the slash command to generate Flux images"""
+        if i2i_image:
+            if "image" not in i2i_image.content_type:
+                await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
+                return
+        if ipadapter_image:
+            if "image" not in ipadapter_image.content_type:
+                await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
+                return
+
+        flux_request = FluxKontextGen(self,
+                                      prompt,
+                                      interaction.channel,
+                                      interaction.user,
+                                      width=width,
+                                      height=height,
+                                      batch_size=batch_size,
+                                      lora_name=lora_name,
+                                      i2i_image=i2i_image,
+                                      strength=i2i_strength,
+                                      ipadapter_image=ipadapter_image,
+                                      ipadapter_strength=ipadapter_strength)
+
+        if await self.is_room_in_queue(interaction.user.id):
+            flux_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
+            flux_queuelogger.info("Kontext Queued")
+            self.request_queue_concurrency_list[interaction.user.id] += 1
+            size = await self.get_queue_depth()
+            await interaction.response.send_message(
+                f"Kontext Image Being Created: {size} requests in queue ahead of you", ephemeral=True
             )
             await self.request_queue.put(flux_request)
 
