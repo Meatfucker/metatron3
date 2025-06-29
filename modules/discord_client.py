@@ -441,7 +441,7 @@ class Metatron3(discord.Client):
                           i2i_strength: Optional[float],
                           ipadapter_image: Optional[discord.Attachment],
                           ipadapter_strength: Optional[float],
-                          batch_size: Optional[int] = 4):
+                          batch_size: Optional[int] = 1):
         """This is the slash command to generate Flux images"""
         if i2i_image:
             if "image" not in i2i_image.content_type:
