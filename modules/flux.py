@@ -228,12 +228,8 @@ class FluxKontextGen:
             kwargs = {"prompt": self.prompt}
             if self.height:
                 kwargs["height"] = self.height
-            else:
-                kwargs["height"] = 1024
             if self.width:
                 kwargs["width"] = self.width
-            else:
-                kwargs["width"] = 1024
             if self.batch_size:
                 kwargs["batch_size"] = self.batch_size
             if self.lora_name:
