@@ -230,6 +230,8 @@ class FluxKontextGen:
                 kwargs["height"] = self.height
             if self.width is not None:
                 kwargs["width"] = self.width
+            print(self.width)
+            print(self.height)
             if self.batch_size:
                 kwargs["batch_size"] = self.batch_size
             if self.lora_name:
@@ -302,7 +304,7 @@ class FluxKontextGen:
         await image.save(attachment_buffer)
         image = Image.open(attachment_buffer)
         image = image.convert("RGB")
-        image = image.resize((width, height))
+        #image = image.resize((width, height))
         buffered = io.BytesIO()
         image.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
