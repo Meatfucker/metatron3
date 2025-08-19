@@ -237,13 +237,12 @@ class FluxKontextGen:
             if self.lora_name:
                 kwargs["lora_name"] = self.lora_name
             if self.i2i_image:
-                self.i2i_image_base64 = await self.image_to_base64(self.i2i_image, kwargs["width"], kwargs["height"])
+                self.i2i_image_base64 = await self.image_to_base64(self.i2i_image)
                 kwargs["image"] = self.i2i_image_base64
             if self.strength:
                 kwargs["strength"] = self.strength
             if self.ipadapter_image:
-                self.ipadapter_image_base64 = await self.image_to_base64(self.ipadapter_image, kwargs["width"],
-                                                                         kwargs["height"])
+                self.ipadapter_image_base64 = await self.image_to_base64(self.ipadapter_image)
                 kwargs["ip_adapter_image"] = self.ipadapter_image_base64
             if self.ipadapter_strength:
                 kwargs["ip_adapter_strength"] = self.ipadapter_strength
@@ -299,7 +298,7 @@ class FluxKontextGen:
         return image_files
 
     @staticmethod
-    async def image_to_base64(image, width, height):
+    async def image_to_base64(image):
         attachment_buffer = io.BytesIO()
         await image.save(attachment_buffer)
         image = Image.open(attachment_buffer)
