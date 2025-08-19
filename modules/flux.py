@@ -195,8 +195,8 @@ class FluxKontextGen:
                  prompt,
                  channel,
                  user,
-                 width,
-                 height,
+                 width=None,
+                 height=None,
                  lora_name=None,
                  batch_size=None,
                  i2i_image=None,
@@ -226,9 +226,9 @@ class FluxKontextGen:
         start_time = time.time()
         try:
             kwargs = {"prompt": self.prompt}
-            if self.height:
+            if self.height is not None:
                 kwargs["height"] = self.height
-            if self.width:
+            if self.width is not None:
                 kwargs["width"] = self.width
             if self.batch_size:
                 kwargs["batch_size"] = self.batch_size
@@ -269,8 +269,8 @@ class FluxKontextGen:
                                             ipadapter_strength=self.ipadapter_strength))
             except Exception as e:
                 logger.error(f"CHANNEL SEND ERROR: {e}")
-            sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-            sdxl_logger.info("SDXL Success")
+            flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            flux_logger.info("FLUX Success")
         except Exception as e:
             await self.channel.send(f"{self.user.mention} Flux Error: {e}")
             flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
