@@ -421,7 +421,7 @@ class Metatron3(discord.Client):
             i2i_strength: Default=0.7: A number between 0-1 that represents the percent of pixels to replace in the i2i_image
             ipadapter_image: An image to extract a style or contents from.
             ipadapter_strength: Default=0.6: A number between 0-1 that represents the strength of the extracted style
-            guidance_scale: Default=5.0: A floating point number altering the strength of classifier free guidance.
+            guidance_scale: Default=3.5: A floating point number altering the strength of classifier free guidance.
             batch_size: Default=4: How many images to gen at once. More images take longer and can potentially crash
 
         Returns:
@@ -505,7 +505,7 @@ class Metatron3(discord.Client):
             i2i_strength: Default=0.7: A number between 0-1 that represents the percent of pixels to replace in the i2i_image
             ipadapter_image: An image to extract a style or contents from.
             ipadapter_strength: Default=0.6: A number between 0-1 that represents the strength of the extracted style
-            guidance_scale: Default=5.0: A floating point number altering the strength of classifier free guidance.
+            guidance_scale: Default=3.5: A floating point number altering the strength of classifier free guidance.
             batch_size: Default=4: How many images to gen at once. More images take longer and can potentially crash
 
         Returns:
