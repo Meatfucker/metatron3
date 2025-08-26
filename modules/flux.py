@@ -21,7 +21,8 @@ class FluxGen:
                  i2i_image=None,
                  strength=None,
                  ipadapter_image=None,
-                 ipadapter_strength=None):
+                 ipadapter_strength=None,
+                 guidance_scale=None):
         self.settings = SettingsLoader("configs")
         self.discord_client = discord_client
         self.avernus_client = discord_client.avernus_client
@@ -40,6 +41,7 @@ class FluxGen:
         self.ipadapter_image = ipadapter_image
         self.ipadapter_image_base64 = None
         self.ipadapter_strength = ipadapter_strength
+        self.guidance_scale = guidance_scale
 
 
     async def run(self):
@@ -68,6 +70,8 @@ class FluxGen:
                 kwargs["ip_adapter_image"] = self.ipadapter_image_base64
             if self.ipadapter_strength:
                 kwargs["ip_adapter_strength"] = self.ipadapter_strength
+            if self.guidance_scale:
+                kwargs["guidance_scale"] = self.guidance_scale
 
 
             base64_images = await self.avernus_client.flux_image(**kwargs)
@@ -90,7 +94,8 @@ class FluxGen:
                                      strength=self.strength,
                                      batch_size=self.batch_size,
                                      ipadapter_image=self.ipadapter_image,
-                                     ipadapter_strength=self.ipadapter_strength))
+                                     ipadapter_strength=self.ipadapter_strength,
+                                     guidance_scale=self.guidance_scale))
             except Exception as e:
                 logger.error(f"CHANNEL SEND ERROR: {e}")
             sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
@@ -159,6 +164,8 @@ class FluxGenEnhanced(FluxGen):
                 kwargs["ip_adapter_image"] = self.ipadapter_image_base64
             if self.ipadapter_strength:
                 kwargs["ip_adapter_strength"] = self.ipadapter_strength
+            if self.guidance_scale:
+                kwargs["guidance_scale"] = self.guidance_scale
 
             base64_images = await self.avernus_client.flux_image(**kwargs)
             images = await self.base64_to_pil_images(base64_images)
@@ -179,7 +186,8 @@ class FluxGenEnhanced(FluxGen):
                                          strength=self.strength,
                                          batch_size=self.batch_size,
                                          ipadapter_image=self.ipadapter_image,
-                                         ipadapter_strength=self.ipadapter_strength))
+                                         ipadapter_strength=self.ipadapter_strength,
+                                         guidance_scale=self.guidance_scale))
             sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
             sdxl_logger.info("Flux Success")
         except Exception as e:
@@ -202,7 +210,8 @@ class FluxKontextGen:
                  i2i_image=None,
                  strength=None,
                  ipadapter_image=None,
-                 ipadapter_strength=None):
+                 ipadapter_strength=None,
+                 guidance_scale=None):
         self.settings = SettingsLoader("configs")
         self.discord_client = discord_client
         self.avernus_client = discord_client.avernus_client
@@ -221,6 +230,7 @@ class FluxKontextGen:
         self.ipadapter_image = ipadapter_image
         self.ipadapter_image_base64 = None
         self.ipadapter_strength = ipadapter_strength
+        self.guidance_scale = guidance_scale
 
     async def run(self):
         start_time = time.time()
@@ -246,6 +256,8 @@ class FluxKontextGen:
                 kwargs["ip_adapter_image"] = self.ipadapter_image_base64
             if self.ipadapter_strength:
                 kwargs["ip_adapter_strength"] = self.ipadapter_strength
+            if self.guidance_scale:
+                kwargs["guidance_scale"] = self.guidance_scale
 
             base64_images = await self.avernus_client.flux_kontext(**kwargs)
             images = await self.base64_to_pil_images(base64_images)
@@ -267,7 +279,8 @@ class FluxKontextGen:
                                             strength=self.strength,
                                             batch_size=self.batch_size,
                                             ipadapter_image=self.ipadapter_image,
-                                            ipadapter_strength=self.ipadapter_strength))
+                                            ipadapter_strength=self.ipadapter_strength,
+                                            guidance_scale=self.guidance_scale))
             except Exception as e:
                 logger.error(f"CHANNEL SEND ERROR: {e}")
             flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
@@ -322,7 +335,8 @@ class FluxButtons(discord.ui.View):
                  strength=None,
                  batch_size=4,
                  ipadapter_image=None,
-                 ipadapter_strength=None):
+                 ipadapter_strength=None,
+                 guidance_scale=None):
         super().__init__()
         self.timeout = None  # Disables the timeout on the buttons
         self.discord_client = discord_client
@@ -337,6 +351,7 @@ class FluxButtons(discord.ui.View):
         self.strength = strength
         self.ipadapter_image = ipadapter_image
         self.ipadapter_strength = ipadapter_strength
+        self.guidance_scale = guidance_scale
 
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -354,6 +369,7 @@ class FluxButtons(discord.ui.View):
                                    strength=self.strength,
                                    ipadapter_image=self.ipadapter_image,
                                    ipadapter_strength=self.ipadapter_strength,
+                                   guidance_scale=self.guidance_scale,
                                    )
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
@@ -410,6 +426,7 @@ class FluxEnhancedButtons(FluxButtons):
                                            strength=self.strength,
                                            ipadapter_image=self.ipadapter_image,
                                            ipadapter_strength=self.ipadapter_strength,
+                                           guidance_scale=self.guidance_scale,
                                            )
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
@@ -441,7 +458,8 @@ class FluxKontextButtons(FluxButtons):
                                           i2i_image=self.i2i_image,
                                           strength=self.strength,
                                           ipadapter_image=self.ipadapter_image,
-                                          ipadapter_strength=self.ipadapter_strength)
+                                          ipadapter_strength=self.ipadapter_strength,
+                                          guidance_scale=self.guidance_scale)
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
                 ephemeral=True

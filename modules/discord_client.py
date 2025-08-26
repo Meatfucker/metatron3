@@ -322,8 +322,8 @@ class Metatron3(discord.Client):
             ipadapter_strength: Default=0.6: A number between 0-1 that represents the strength of the extracted style
             control_processor: Which controlnet processor to use on the controlnet image
             control_image: An image to supply to the controlnet processor
-            control_strength: Default=0.5: A number between 0-1 representing the balance between the controlnet and the generation. 0.5 being equally balanced
-            guidance_scale: Default=5.0: A floating point number altering the strength of classifier free guidance. Higher numbers will listen to the prompt better but will cook the image.
+            control_strength: Default=0.5: A number between 0-1 representing the balance between the controlnet and the generation.
+            guidance_scale: Default=5.0: A floating point number altering the strength of classifier free guidance.
             batch_size: Default=4: How many images to gen at once. More images take longer and can potentially crash
 
         Returns:
@@ -405,8 +405,28 @@ class Metatron3(discord.Client):
                        i2i_strength: Optional[float],
                        ipadapter_image: Optional[discord.Attachment],
                        ipadapter_strength: Optional[float],
+                       guidance_scale: Optional[float],
                        batch_size: Optional[int] = 4):
-        """This is the slash command to generate Flux images"""
+        """This is the slash command to generate Flux images
+
+        Generates images using the Flux pipeline
+
+        Args:
+            prompt (str): What you want to generate
+            width (int): Default=1024: How many pixels wide you want the image
+            height (int): Default=1024: How many pixels tall you want the image
+            enhance_prompt (bool): Default=False: Whether to use a LLM to enhance your prompt
+            lora_name: Default=None: What optional lora to use
+            i2i_image: An image to use as a base for generation
+            i2i_strength: Default=0.7: A number between 0-1 that represents the percent of pixels to replace in the i2i_image
+            ipadapter_image: An image to extract a style or contents from.
+            ipadapter_strength: Default=0.6: A number between 0-1 that represents the strength of the extracted style
+            guidance_scale: Default=5.0: A floating point number altering the strength of classifier free guidance.
+            batch_size: Default=4: How many images to gen at once. More images take longer and can potentially crash
+
+        Returns:
+            A list containing the generated images
+        """
         if i2i_image:
             if "image" not in i2i_image.content_type:
                 await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
@@ -428,7 +448,8 @@ class Metatron3(discord.Client):
                                            i2i_image=i2i_image,
                                            strength=i2i_strength,
                                            ipadapter_image=ipadapter_image,
-                                           ipadapter_strength=ipadapter_strength)
+                                           ipadapter_strength=ipadapter_strength,
+                                           guidance_scale=guidance_scale)
         else:
             flux_request = FluxGen(self,
                                    prompt,
@@ -441,7 +462,8 @@ class Metatron3(discord.Client):
                                    i2i_image=i2i_image,
                                    strength=i2i_strength,
                                    ipadapter_image=ipadapter_image,
-                                   ipadapter_strength=ipadapter_strength)
+                                   ipadapter_strength=ipadapter_strength,
+                                   guidance_scale=guidance_scale)
 
         if await self.is_room_in_queue(interaction.user.id):
             flux_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
@@ -468,8 +490,27 @@ class Metatron3(discord.Client):
                           i2i_strength: Optional[float],
                           ipadapter_image: Optional[discord.Attachment],
                           ipadapter_strength: Optional[float],
+                          guidance_scale: Optional[float],
                           batch_size: Optional[int] = 1):
-        """This is the slash command to generate Flux images"""
+        """This is the slash command to edit images with Flux Kontext
+
+        This edits the supplied image using the Kontext pipeline
+
+        Args:
+            prompt (str): What edit to mae
+            width (int): Default=1024: How many pixels wide you want the image
+            height (int): Default=1024: How many pixels tall you want the image
+            lora_name: Default=None: What optional lora to use
+            i2i_image: An image to edit
+            i2i_strength: Default=0.7: A number between 0-1 that represents the percent of pixels to replace in the i2i_image
+            ipadapter_image: An image to extract a style or contents from.
+            ipadapter_strength: Default=0.6: A number between 0-1 that represents the strength of the extracted style
+            guidance_scale: Default=5.0: A floating point number altering the strength of classifier free guidance.
+            batch_size: Default=4: How many images to gen at once. More images take longer and can potentially crash
+
+        Returns:
+            A list containing the generated images
+        """
         if i2i_image:
             if "image" not in i2i_image.content_type:
                 await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
@@ -490,7 +531,8 @@ class Metatron3(discord.Client):
                                       i2i_image=i2i_image,
                                       strength=i2i_strength,
                                       ipadapter_image=ipadapter_image,
-                                      ipadapter_strength=ipadapter_strength)
+                                      ipadapter_strength=ipadapter_strength,
+                                      guidance_scale=guidance_scale)
 
         if await self.is_room_in_queue(interaction.user.id):
             flux_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
