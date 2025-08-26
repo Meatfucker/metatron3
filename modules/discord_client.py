@@ -147,6 +147,24 @@ class Metatron3(discord.Client):
         sdxl_command._params["model_name"].choices = self.sd_xl_models_choices
         sdxl_command._params["lora_name"].choices = self.sd_xl_loras_choices
         sdxl_command._params["control_processor"].choices = self.sd_xl_controlnet_choices
+        sdxl_command.describe(
+            prompt="What you want to generate",
+            negative_prompt="Default=None: Things you dont want in the image",
+            width="Default=1024: How many pixels wide you want the image",
+            height="Default=1024: How many pixels tall you want the image",
+            enhance_prompt="Default=False: Whether to use a LLM to enhance your prompt",
+            lora_name="Default=None: What optional lora to use",
+            model_name="What model to use to generate with",
+            i2i_image="An image to use as a base for generation",
+            i2i_strength="Default=0.7: A number between 0-1 that represents the percent of pixels to replace in the i2i_image",
+            ipadapter_image="An image to extract a style or contents from.",
+            ipadapter_strength="Default=0.6: A number between 0-1 that represents the strength of the extracted style",
+            control_processor="Which controlnet processor to use on the controlnet image",
+            control_image="An image to supply to the controlnet processor",
+            control_strength="Default=0.5: A number between 0-1 representing the balance between the controlnet and the generation. 0.5 being equally balanced",
+            guidance_scale="Default=5.0: A floating point number altering the strength of classifier free guidance. Higher numbers will listen to the prompt better but will cook the image.",
+            batch_size="Default=4: How many images to gen at once. More images take longer and can potentially crash."
+        )
         flux_command = discord.app_commands.Command(name="flux_gen",
                                                     description="Generate an image using Flux",
                                                     callback=self.flux_gen)
@@ -302,6 +320,7 @@ class Metatron3(discord.Client):
                        control_processor: Optional[str],
                        control_image: Optional[discord.Attachment],
                        control_strength: Optional[float],
+                       guidance_scale: Optional[float],
                        batch_size: Optional[int] = 4,):
         """This is the slash command to generate SDXL images"""
         if i2i_image:
@@ -333,7 +352,8 @@ class Metatron3(discord.Client):
                                            ipadapter_strength=ipadapter_strength,
                                            control_processor=control_processor,
                                            control_image=control_image,
-                                           control_strength=control_strength)
+                                           control_strength=control_strength,
+                                           guidance_scale=guidance_scale)
         else:
             sdxl_request = SDXLGen(self,
                                    prompt,
@@ -351,7 +371,8 @@ class Metatron3(discord.Client):
                                    ipadapter_strength=ipadapter_strength,
                                    control_processor=control_processor,
                                    control_image=control_image,
-                                   control_strength=control_strength)
+                                   control_strength=control_strength,
+                                   guidance_scale=guidance_scale)
 
         if await self.is_room_in_queue(interaction.user.id):
             sdxl_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)

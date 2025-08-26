@@ -26,7 +26,8 @@ class SDXLGen:
                  ipadapter_strength=None,
                  control_processor=None,
                  control_image=None,
-                 control_strength=None):
+                 control_strength=None,
+                 guidance_scale=None):
         self.settings = SettingsLoader("configs")
         self.discord_client = discord_client
         self.avernus_client = discord_client.avernus_client
@@ -51,6 +52,7 @@ class SDXLGen:
         self.control_image = control_image
         self.control_image_base64 = None
         self.control_strength = control_strength
+        self.guidance_scale = guidance_scale
 
     async def run(self):
         start_time = time.time()
@@ -88,6 +90,8 @@ class SDXLGen:
                 kwargs["controlnet_processor"] = self.control_processor
             if self.control_strength:
                 kwargs["controlnet_strength"] = self.control_strength
+            if self.guidance_scale:
+                kwargs["guidance_scale"] = self.guidance_scale
 
             base64_images = await self.avernus_client.sdxl_image(**kwargs)
             images = await self.base64_to_pil_images(base64_images)
@@ -114,7 +118,8 @@ class SDXLGen:
                                      ipadapter_strength=self.ipadapter_strength,
                                      control_image=self.control_image,
                                      control_processor=self.control_processor,
-                                     control_strength=self.control_strength))
+                                     control_strength=self.control_strength,
+                                     guidance_scale=self.guidance_scale))
             except Exception as e:
                 logger.error(f"CHANNEL SEND ERROR: {e}")
             sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
@@ -194,6 +199,8 @@ class SDXLGenEnhanced(SDXLGen):
                 kwargs["controlnet_processor"] = self.control_processor
             if self.control_strength:
                 kwargs["controlnet_strength"] = self.control_strength
+            if self.guidance_scale:
+                kwargs["guidance_scale"] = self.guidance_scale
 
             base64_images = await self.avernus_client.sdxl_image(**kwargs)
             images = await self.base64_to_pil_images(base64_images)
@@ -219,7 +226,8 @@ class SDXLGenEnhanced(SDXLGen):
                                          ipadapter_strength=self.ipadapter_strength,
                                          control_image=self.control_image,
                                          control_processor=self.control_processor,
-                                         control_strength=self.control_strength))
+                                         control_strength=self.control_strength,
+                                         guidance_scale=self.guidance_scale))
             sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
             sdxl_logger.info("SDXL Success")
         except Exception as e:
@@ -247,7 +255,8 @@ class SDXLButtons(discord.ui.View):
                  ipadapter_strength=None,
                  control_processor=None,
                  control_image=None,
-                 control_strength=None):
+                 control_strength=None,
+                 guidance_scale=None):
         super().__init__()
         self.timeout = None  # Disables the timeout on the buttons
         self.discord_client = discord_client
@@ -267,6 +276,7 @@ class SDXLButtons(discord.ui.View):
         self.control_processor = control_processor
         self.control_image = control_image
         self.control_strength = control_strength
+        self.guidance_scale = guidance_scale
 
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -288,7 +298,8 @@ class SDXLButtons(discord.ui.View):
                                    ipadapter_strength=self.ipadapter_strength,
                                    control_image=self.control_image,
                                    control_processor=self.control_processor,
-                                   control_strength=self.control_strength)
+                                   control_strength=self.control_strength,
+                                   guidance_scale=self.guidance_scale)
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
                 ephemeral=True
@@ -348,7 +359,8 @@ class SDXLEnhancedButtons(SDXLButtons):
                                            ipadapter_strength=self.ipadapter_strength,
                                            control_image=self.control_image,
                                            control_processor=self.control_processor,
-                                           control_strength=self.control_strength)
+                                           control_strength=self.control_strength,
+                                           guidance_scale=self.guidance_scale)
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
                 ephemeral=True
