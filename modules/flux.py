@@ -99,7 +99,7 @@ class FluxGen:
             except Exception as e:
                 logger.error(f"CHANNEL SEND ERROR: {e}")
             sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-            sdxl_logger.info("SDXL Success")
+            sdxl_logger.info("FLUX Success")
         except Exception as e:
             await self.channel.send(f"{self.user.mention} Flux Error: {e}")
             flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
@@ -189,7 +189,7 @@ class FluxGenEnhanced(FluxGen):
                                          ipadapter_strength=self.ipadapter_strength,
                                          guidance_scale=self.guidance_scale))
             sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-            sdxl_logger.info("Flux Success")
+            sdxl_logger.info("FLUX Success")
         except Exception as e:
             await self.channel.send(f"{self.user.mention} Flux Error: {e}")
             flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
@@ -284,7 +284,7 @@ class FluxKontextGen:
             except Exception as e:
                 logger.error(f"CHANNEL SEND ERROR: {e}")
             flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-            flux_logger.info("FLUX Success")
+            flux_logger.info("FLUX Kontext Success")
         except Exception as e:
             await self.channel.send(f"{self.user.mention} Flux Error: {e}")
             flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
