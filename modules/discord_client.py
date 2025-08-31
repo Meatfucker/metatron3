@@ -11,6 +11,7 @@ from modules.llm_chat import LlmChat, LlmChatClear
 from modules.mtg_card import MTGCardGen, MTGCardGenThreePack, MTGCardGenFlux, MTGCardGenFluxThreePack
 from modules.sdxl import SDXLGen, SDXLGenEnhanced
 from modules.flux import FluxGen, FluxGenEnhanced, FluxKontextGen
+from modules.ace import AceGen
 
 
 # noinspection PyUnresolvedReferences
@@ -155,6 +156,9 @@ class Metatron3(discord.Client):
                                                     description="Edit an image using Kontext",
                                                     callback=self.kontext_gen)
         kontext_command._params["lora_name"].choices = self.flux_loras_choices
+        ace_command = discord.app_commands.Command(name="ace_gen",
+                                                   description="Generate music using AceStep",
+                                                   callback=self.ace_gen)
         self.slash_commands.add_command(toggle_user_ban_command)
         self.slash_commands.add_command(clear_chat_command)
         self.slash_commands.add_command(mtg_command)
@@ -164,6 +168,7 @@ class Metatron3(discord.Client):
         self.slash_commands.add_command(sdxl_command)
         self.slash_commands.add_command(flux_command)
         self.slash_commands.add_command(kontext_command)
+        self.slash_commands.add_command(ace_command)
 
     @staticmethod
     async def toggle_user_ban(interaction: discord.Interaction, user_id: str):
@@ -544,6 +549,45 @@ class Metatron3(discord.Client):
             )
             await self.request_queue.put(flux_request)
 
+        else:
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )
+
+    async def ace_gen(self,
+                      interaction: discord.Interaction,
+                      prompt: str,
+                      lyrics: str,
+                      length: Optional[int]
+                      ):
+        """This is the slash command to generate ACE music
+
+        This generates music using the Ace pipeline
+
+        Args:
+            prompt (str): comma separated list of instruments or genres
+            lyrics (str): lyrics, can be further controlled with certain tags see https://github.com/ACE-Step/ACE-Step?tab=readme-ov-file#-usage
+
+        Returns:
+            A mp3
+        """
+
+        ace_request = AceGen(self,
+                             prompt,
+                             interaction.channel,
+                             interaction.user,
+                             lyrics,
+                             length)
+
+        if await self.is_room_in_queue(interaction.user.id):
+            sdxl_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
+            sdxl_queuelogger.info("ACE Queued")
+            self.request_queue_concurrency_list[interaction.user.id] += 1
+            size = await self.get_queue_depth()
+            await interaction.response.send_message(
+                f"ACE mp3 Being Created: {size} requests in queue ahead of you", ephemeral=True
+            )
+            await self.request_queue.put(ace_request)
         else:
             await interaction.response.send_message(
                 "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
