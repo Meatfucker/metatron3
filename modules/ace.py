@@ -133,8 +133,9 @@ def load_audio_from_bytes(audio_bytes):
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
         f.write(audio_bytes)
         f.flush()
-        convert_wav_to_mp3(f.name, f.name)
-        return f.name
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as mp3file:
+            convert_wav_to_mp3(f.name, mp3file.name)
+            return mp3file.name
 
 def convert_wav_to_mp3(wav_path: str, mp3_path: str):
     try:
