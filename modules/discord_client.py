@@ -5,6 +5,8 @@ import re
 import discord
 from typing import Optional
 from loguru import logger
+
+from modules.qwen_image import QwenImageGenEnhanced
 from modules.settings_loader import SettingsLoader
 from modules.avernus_client import AvernusClient
 from modules.llm_chat import LlmChat, LlmChatClear
@@ -12,6 +14,7 @@ from modules.mtg_card import MTGCardGen, MTGCardGenThreePack, MTGCardGenFlux, MT
 from modules.sdxl import SDXLGen, SDXLGenEnhanced
 from modules.flux import FluxGen, FluxGenEnhanced, FluxKontextGen
 from modules.ace import AceGen
+from modules.qwen_image import QwenImageGen, QwenImageGenEnhanced, QwenImageEditGen
 
 
 # noinspection PyUnresolvedReferences
@@ -30,6 +33,7 @@ class Metatron3(discord.Client):
         self.sd_xl_loras_choices: list = []
         self.sd_xl_controlnet_choices: list = []
         self.flux_loras_choices: list = []
+        self.qwen_image_loras_choices: list = []
 
     async def setup_hook(self):
         """This loads the various shit before logging in to discord"""
@@ -119,6 +123,10 @@ class Metatron3(discord.Client):
         for lora in flux_loras_list:
             self.flux_loras_choices.append(discord.app_commands.Choice(name=lora, value=lora))
 
+        qwen_image_loras_list = await self.avernus_client.list_qwen_image_loras()  # get the list of available loras to build the interface with
+        for lora in qwen_image_loras_list:
+            self.qwen_image_loras_choices.append(discord.app_commands.Choice(name=lora, value=lora))
+
         for model in self.settings["avernus"]["sdxl_models_list"]:
             self.sd_xl_models_choices.append(discord.app_commands.Choice(name=model, value=model))
 
@@ -159,6 +167,14 @@ class Metatron3(discord.Client):
         ace_command = discord.app_commands.Command(name="ace_gen",
                                                    description="Generate music using AceStep",
                                                    callback=self.ace_gen)
+        qwen_image_command = discord.app_commands.Command(name="qwen_image_gen",
+                                                          description="Generate an image use Qwen Image",
+                                                          callback=self.qwen_image_gen)
+        qwen_image_command._params["lora_name"].choices = self.qwen_image_loras_choices
+        qwen_image_edit_command = discord.app_commands.Command(name="qwen_image_edit_gen",
+                                                               description="Edit an image use Qwen Image Edit",
+                                                               callback=self.qwen_image_edit_gen)
+        qwen_image_edit_command._params["lora_name"].choices = self.qwen_image_loras_choices
         self.slash_commands.add_command(toggle_user_ban_command)
         self.slash_commands.add_command(clear_chat_command)
         self.slash_commands.add_command(mtg_command)
@@ -169,6 +185,8 @@ class Metatron3(discord.Client):
         self.slash_commands.add_command(flux_command)
         self.slash_commands.add_command(kontext_command)
         self.slash_commands.add_command(ace_command)
+        self.slash_commands.add_command(qwen_image_command)
+        self.slash_commands.add_command(qwen_image_edit_command)
 
     @staticmethod
     async def toggle_user_ban(interaction: discord.Interaction, user_id: str):
@@ -588,6 +606,146 @@ class Metatron3(discord.Client):
                 f"ACE mp3 Being Created: {size} requests in queue ahead of you", ephemeral=True
             )
             await self.request_queue.put(ace_request)
+        else:
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )
+
+    async def qwen_image_gen(self,
+                            interaction: discord.Interaction,
+                            prompt: str,
+                            negative_prompt: Optional[str],
+                            width: Optional[int],
+                            height: Optional[int],
+                            lora_name: Optional[str],
+                            enhance_prompt: Optional[bool],
+                            i2i_image: Optional[discord.Attachment],
+                            i2i_strength: Optional[float],
+                            true_cfg_scale: Optional[float],
+                            batch_size: Optional[int] = 4):
+        """This is the slash command to generate Qwen Image images
+
+        Generates images using the Qwen Image pipeline
+
+        Args:
+            prompt (str): What you want to generate
+            negative_prompt (str): What you dont want to generate
+            width (int): Default=1024: How many pixels wide you want the image
+            height (int): Default=1024: How many pixels tall you want the image
+            enhance_prompt (bool): Default=False: Whether to use a LLM to enhance your prompt
+            lora_name: Default=None: What optional lora to use
+            i2i_image: An image to use as a base for generation
+            i2i_strength: Default=0.7: A number between 0-1 that represents the percent of pixels to replace in the i2i_image
+            true_cfg_scale: Default=4.0: A floating point number altering the strength of classifier free guidance.
+            batch_size: Default=4: How many images to gen at once. More images take longer and can potentially crash
+
+        Returns:
+            A list containing the generated images
+        """
+        if i2i_image:
+            if "image" not in i2i_image.content_type:
+                await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
+                return
+
+        if enhance_prompt:
+            qwen_image_request = QwenImageGenEnhanced(self,
+                                                      prompt,
+                                                      interaction.channel,
+                                                      interaction.user,
+                                                      width=width,
+                                                      height=height,
+                                                      batch_size=batch_size,
+                                                      lora_name=lora_name,
+                                                      i2i_image=i2i_image,
+                                                      strength=i2i_strength,
+                                                      negative_prompt=negative_prompt,
+                                                      true_cfg_scale=true_cfg_scale)
+        else:
+            qwen_image_request = QwenImageGen(self,
+                                              prompt,
+                                              interaction.channel,
+                                              interaction.user,
+                                              width=width,
+                                              height=height,
+                                              batch_size=batch_size,
+                                              lora_name=lora_name,
+                                              i2i_image=i2i_image,
+                                              strength=i2i_strength,
+                                              negative_prompt=negative_prompt,
+                                              true_cfg_scale=true_cfg_scale)
+
+        if await self.is_room_in_queue(interaction.user.id):
+            qwen_image_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
+            qwen_image_queuelogger.info("Qwen Image Queued")
+            self.request_queue_concurrency_list[interaction.user.id] += 1
+            size = await self.get_queue_depth()
+            await interaction.response.send_message(
+                f"Qwen Image Image Being Created: {size} requests in queue ahead of you", ephemeral=True
+            )
+            await self.request_queue.put(qwen_image_request)
+
+        else:
+            await interaction.response.send_message(
+                "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
+            )
+
+    async def qwen_image_edit_gen(self,
+                                  interaction: discord.Interaction,
+                                  prompt: str,
+                                  i2i_image: discord.Attachment,
+                                  negative_prompt: Optional[str],
+                                  width: Optional[int],
+                                  height: Optional[int],
+                                  lora_name: Optional[str],
+                                  i2i_strength: Optional[float],
+                                  true_cfg_scale: Optional[float],
+                                  batch_size: Optional[int] = 1):
+        """This is the slash command to edit images with Qwen Image Edit
+
+        This edits the supplied image using the Qwen Image Edit pipeline
+
+        Args:
+            prompt (str): What edit to make
+            negative_prompt (str): What edits not to make? Not actually sure how negatives work on edit
+            width (int): Default=1024: How many pixels wide you want the image
+            height (int): Default=1024: How many pixels tall you want the image
+            lora_name: Default=None: What optional lora to use
+            i2i_image: An image to edit
+            i2i_strength: Default=0.7: A number between 0-1 that represents the percent of pixels to replace in the i2i_image
+            true_cfg_scale: Default=4.0: A floating point number altering the strength of classifier free guidance.
+            batch_size: Default=4: How many images to gen at once. More images take longer and can potentially crash
+
+        Returns:
+            A list containing the generated images
+        """
+        if i2i_image:
+            if "image" not in i2i_image.content_type:
+                await interaction.response.send_message("Please choose a valid image", ephemeral=True, delete_after=5)
+                return
+
+        qwen_image_edit_request = QwenImageEditGen(self,
+                                                   prompt,
+                                                   interaction.channel,
+                                                   interaction.user,
+                                                   width=width,
+                                                   height=height,
+                                                   batch_size=batch_size,
+                                                   lora_name=lora_name,
+                                                   i2i_image=i2i_image,
+                                                   strength=i2i_strength,
+                                                   negative_prompt=negative_prompt,
+                                                   true_cfg_scale=true_cfg_scale)
+
+        if await self.is_room_in_queue(interaction.user.id):
+            qwen_image_edit_queuelogger = logger.bind(user=interaction.user.name, prompt=prompt)
+            qwen_image_edit_queuelogger.info("Qwen Image Edit Queued")
+            self.request_queue_concurrency_list[interaction.user.id] += 1
+            size = await self.get_queue_depth()
+            await interaction.response.send_message(
+                f"Qwen Image Edit Image Being Created: {size} requests in queue ahead of you", ephemeral=True
+            )
+            await self.request_queue.put(qwen_image_edit_request)
+
         else:
             await interaction.response.send_message(
                 "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True

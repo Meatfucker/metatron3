@@ -7,8 +7,8 @@ from loguru import logger
 from PIL import Image
 from modules.settings_loader import SettingsLoader
 
-class FluxGen:
-    """This is the queue object for flux generations"""
+class QwenImageGen:
+    """This is the queue object for qwen-image generations"""
     def __init__(self,
                  discord_client,
                  prompt,
@@ -20,13 +20,13 @@ class FluxGen:
                  batch_size=None,
                  i2i_image=None,
                  strength=None,
-                 ipadapter_image=None,
-                 ipadapter_strength=None,
-                 guidance_scale=None):
+                 negative_prompt=None,
+                 true_cfg_scale=None):
         self.settings = SettingsLoader("configs")
         self.discord_client = discord_client
         self.avernus_client = discord_client.avernus_client
         self.prompt = prompt
+        self.negative_prompt = negative_prompt
         self.channel = channel
         self.user = user
         self.width = width
@@ -38,16 +38,15 @@ class FluxGen:
         self.i2i_image = i2i_image
         self.i2i_image_base64 = None
         self.strength = strength
-        self.ipadapter_image = ipadapter_image
-        self.ipadapter_image_base64 = None
-        self.ipadapter_strength = ipadapter_strength
-        self.guidance_scale = guidance_scale
+        self.true_cfg_scale = true_cfg_scale
 
 
     async def run(self):
         start_time = time.time()
         try:
             kwargs = {"prompt": self.prompt}
+            if self.negative_prompt:
+                kwargs["negative_prompt"] = self.negative_prompt
             if self.height:
                 kwargs["height"] = self.height
             else:
@@ -65,45 +64,39 @@ class FluxGen:
                 kwargs["image"] = self.i2i_image_base64
             if self.strength:
                 kwargs["strength"] = self.strength
-            if self.ipadapter_image:
-                self.ipadapter_image_base64 = await self.image_to_base64(self.ipadapter_image, kwargs["width"], kwargs["height"])
-                kwargs["ip_adapter_image"] = self.ipadapter_image_base64
-            if self.ipadapter_strength:
-                kwargs["ip_adapter_strength"] = self.ipadapter_strength
-            if self.guidance_scale:
-                kwargs["guidance_scale"] = self.guidance_scale
+            if self.true_cfg_scale:
+                kwargs["true_cfg_scale"] = self.true_cfg_scale
 
 
-            base64_images = await self.avernus_client.flux_image(**kwargs)
+            base64_images = await self.avernus_client.qwen_image_image(**kwargs)
             images = await self.base64_to_pil_images(base64_images)
             files = await self.images_to_discord_files(images)
             end_time = time.time()
             elapsed_time = end_time - start_time
             try:
                 await self.channel.send(
-                    content=f"Flux Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
+                    content=f"Qwen Image Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
                     files=files,
-                    view=FluxButtons(discord_client=self.discord_client,
-                                     prompt=self.prompt,
-                                     channel=self.channel,
-                                     user=self.user,
-                                     width=self.width,
-                                     height=self.height,
-                                     lora_name=self.lora_name,
-                                     i2i_image=self.i2i_image,
-                                     strength=self.strength,
-                                     batch_size=self.batch_size,
-                                     ipadapter_image=self.ipadapter_image,
-                                     ipadapter_strength=self.ipadapter_strength,
-                                     guidance_scale=self.guidance_scale))
+                    view=QwenImageButtons(discord_client=self.discord_client,
+                                          prompt=self.prompt,
+                                          negative_prompt=self.negative_prompt,
+                                          channel=self.channel,
+                                          user=self.user,
+                                          width=self.width,
+                                          height=self.height,
+                                          lora_name=self.lora_name,
+                                          i2i_image=self.i2i_image,
+                                          strength=self.strength,
+                                          batch_size=self.batch_size,
+                                          true_cfg_scale=self.true_cfg_scale))
             except Exception as e:
                 logger.error(f"CHANNEL SEND ERROR: {e}")
-            sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-            sdxl_logger.info("FLUX Success")
+            qwen_image_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            qwen_image_logger.info("QWEN IMAGE Success")
         except Exception as e:
-            await self.channel.send(f"{self.user.mention} Flux Error: {e}")
-            flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-            flux_logger.error(f"FLUX ERROR: {e}")
+            await self.channel.send(f"{self.user.mention} Qwen Image Error: {e}")
+            qwen_image_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            qwen_image_logger.error(f"QWEN IMAGE ERROR: {e}")
 
     async def images_to_discord_files(self, images):
         """Takes a list of images or image objects and returns a list of discord file objects"""
@@ -136,12 +129,14 @@ class FluxGen:
         image.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-class FluxGenEnhanced(FluxGen):
+class QwenImageGenEnhanced(QwenImageGen):
     async def run(self):
         start_time = time.time()
         try:
             enhanced_prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
             kwargs = {"prompt": self.prompt}
+            if self.negative_prompt:
+                kwargs["negative_prompt"] = self.negative_prompt
             if self.height:
                 kwargs["height"] = self.height
             else:
@@ -159,45 +154,39 @@ class FluxGenEnhanced(FluxGen):
                 kwargs["image"] = self.i2i_image_base64
             if self.strength:
                 kwargs["strength"] = self.strength
-            if self.ipadapter_image:
-                self.ipadapter_image_base64 = await self.image_to_base64(self.ipadapter_image, kwargs["width"], kwargs["height"])
-                kwargs["ip_adapter_image"] = self.ipadapter_image_base64
-            if self.ipadapter_strength:
-                kwargs["ip_adapter_strength"] = self.ipadapter_strength
-            if self.guidance_scale:
-                kwargs["guidance_scale"] = self.guidance_scale
+            if self.true_cfg_scale:
+                kwargs["true_cfg_scale"] = self.true_cfg_scale
 
-            base64_images = await self.avernus_client.flux_image(**kwargs)
+            base64_images = await self.avernus_client.qwen_image_image(**kwargs)
             images = await self.base64_to_pil_images(base64_images)
             files = await self.images_to_discord_files(images)
             end_time = time.time()
             elapsed_time = end_time - start_time
             await self.channel.send(
-                content=f"Flux Gen for: {self.user.mention} Prompt:`{self.prompt}` Enhanced Prompt:`{enhanced_prompt}` Lora:`{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
+                content=f"Qwen Image Gen for: {self.user.mention} Prompt:`{self.prompt}` Enhanced Prompt:`{enhanced_prompt}` Lora:`{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
                 files=files,
-                view=FluxEnhancedButtons(discord_client=self.discord_client,
-                                         prompt=self.prompt,
-                                         channel=self.channel,
-                                         user=self.user,
-                                         width=self.width,
-                                         height=self.height,
-                                         lora_name=self.lora_name,
-                                         i2i_image=self.i2i_image,
-                                         strength=self.strength,
-                                         batch_size=self.batch_size,
-                                         ipadapter_image=self.ipadapter_image,
-                                         ipadapter_strength=self.ipadapter_strength,
-                                         guidance_scale=self.guidance_scale))
-            sdxl_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-            sdxl_logger.info("FLUX Success")
+                view=QwenImageEnhancedButtons(discord_client=self.discord_client,
+                                              prompt=self.prompt,
+                                              negative_prompt=self.negative_prompt,
+                                              channel=self.channel,
+                                              user=self.user,
+                                              width=self.width,
+                                              height=self.height,
+                                              lora_name=self.lora_name,
+                                              i2i_image=self.i2i_image,
+                                              strength=self.strength,
+                                              batch_size=self.batch_size,
+                                              true_cfg_scale=self.true_cfg_scale))
+            qwen_image_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            qwen_image_logger.info("QWEN IMAGE Success")
         except Exception as e:
-            await self.channel.send(f"{self.user.mention} Flux Error: {e}")
-            flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-            flux_logger.error(f"FLUX ERROR: {e}")
+            await self.channel.send(f"{self.user.mention} Qwen Image Error: {e}")
+            qwen_image_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
+            qwen_image_logger.error(f"QWEN IMAGE ERROR: {e}")
 
 
-class FluxKontextGen:
-    """This is the queue object for flux generations"""
+class QwenImageEditGen:
+    """This is the queue object for qwen-image-edit generations"""
     def __init__(self,
                  discord_client,
                  prompt,
@@ -209,13 +198,13 @@ class FluxKontextGen:
                  batch_size=None,
                  i2i_image=None,
                  strength=None,
-                 ipadapter_image=None,
-                 ipadapter_strength=None,
-                 guidance_scale=None):
+                 negative_prompt=None,
+                 true_cfg_scale=None):
         self.settings = SettingsLoader("configs")
         self.discord_client = discord_client
         self.avernus_client = discord_client.avernus_client
         self.prompt = prompt
+        self.negative_prompt = negative_prompt
         self.channel = channel
         self.user = user
         self.width = width
@@ -227,15 +216,14 @@ class FluxKontextGen:
         self.i2i_image = i2i_image
         self.i2i_image_base64 = None
         self.strength = strength
-        self.ipadapter_image = ipadapter_image
-        self.ipadapter_image_base64 = None
-        self.ipadapter_strength = ipadapter_strength
-        self.guidance_scale = guidance_scale
+        self.true_cfg_scale = true_cfg_scale
 
     async def run(self):
         start_time = time.time()
         try:
             kwargs = {"prompt": self.prompt}
+            if self.negative_prompt is not None:
+                kwargs["negative_prompt"] = self.negative_prompt
             if self.height is not None:
                 kwargs["height"] = self.height
             if self.width is not None:
@@ -249,44 +237,38 @@ class FluxKontextGen:
                 kwargs["image"] = self.i2i_image_base64
             if self.strength:
                 kwargs["strength"] = self.strength
-            if self.ipadapter_image:
-                self.ipadapter_image_base64 = await self.image_to_base64(self.ipadapter_image)
-                kwargs["ip_adapter_image"] = self.ipadapter_image_base64
-            if self.ipadapter_strength:
-                kwargs["ip_adapter_strength"] = self.ipadapter_strength
-            if self.guidance_scale:
-                kwargs["guidance_scale"] = self.guidance_scale
+            if self.true_cfg_scale:
+                kwargs["true_cfg_scale"] = self.true_cfg_scale
 
-            base64_images = await self.avernus_client.flux_kontext(**kwargs)
+            base64_images = await self.avernus_client.qwen_image_edit(**kwargs)
             images = await self.base64_to_pil_images(base64_images)
             files = await self.images_to_discord_files(images)
             end_time = time.time()
             elapsed_time = end_time - start_time
             try:
                 await self.channel.send(
-                    content=f"Flux Kontext Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
+                    content=f"Qwen Image Edit Gen for {self.user.mention}: Prompt: `{self.prompt}` Lora: `{self.lora_name}` Time:`{elapsed_time:.2f} seconds`",
                     files=files,
-                    view=FluxKontextButtons(discord_client=self.discord_client,
-                                            prompt=self.prompt,
-                                            channel=self.channel,
-                                            user=self.user,
-                                            width=self.width,
-                                            height=self.height,
-                                            lora_name=self.lora_name,
-                                            i2i_image=self.i2i_image,
-                                            strength=self.strength,
-                                            batch_size=self.batch_size,
-                                            ipadapter_image=self.ipadapter_image,
-                                            ipadapter_strength=self.ipadapter_strength,
-                                            guidance_scale=self.guidance_scale))
+                    view=QwenImageEditButtons(discord_client=self.discord_client,
+                                              prompt=self.prompt,
+                                              channel=self.channel,
+                                              user=self.user,
+                                              width=self.width,
+                                              height=self.height,
+                                              lora_name=self.lora_name,
+                                              i2i_image=self.i2i_image,
+                                              strength=self.strength,
+                                              batch_size=self.batch_size,
+                                              negative_prompt=self.negative_prompt,
+                                              true_cfg_scale=self.true_cfg_scale))
             except Exception as e:
                 logger.error(f"CHANNEL SEND ERROR: {e}")
             flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-            flux_logger.info("FLUX Kontext Success")
+            flux_logger.info("Qwen Image Edit Success")
         except Exception as e:
-            await self.channel.send(f"{self.user.mention} Flux Error: {e}")
+            await self.channel.send(f"{self.user.mention} Qwen Image Edit Error: {e}")
             flux_logger = logger.bind(user=f'{self.user}', prompt=self.prompt)
-            flux_logger.error(f"FLUX ERROR: {e}")
+            flux_logger.error(f"QWEN IMAGE EDIT ERROR: {e}")
 
     async def images_to_discord_files(self, images):
         """Takes a list of images or image objects and returns a list of discord file objects"""
@@ -319,8 +301,8 @@ class FluxKontextGen:
         image.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-class FluxButtons(discord.ui.View):
-    """Class for the ui buttons on /flux_gen"""
+class QwenImageButtons(discord.ui.View):
+    """Class for the ui buttons on /qwen_image_gen"""
     def __init__(self,
                  discord_client,
                  prompt,
@@ -332,13 +314,13 @@ class FluxButtons(discord.ui.View):
                  i2i_image=None,
                  strength=None,
                  batch_size=4,
-                 ipadapter_image=None,
-                 ipadapter_strength=None,
-                 guidance_scale=None):
+                 negative_prompt=None,
+                 true_cfg_scale=None):
         super().__init__()
         self.timeout = None  # Disables the timeout on the buttons
         self.discord_client = discord_client
         self.prompt = prompt
+        self.negative_prompt = negative_prompt
         self.channel = channel
         self.user = user
         self.width = width
@@ -347,36 +329,33 @@ class FluxButtons(discord.ui.View):
         self.batch_size = batch_size
         self.i2i_image = i2i_image
         self.strength = strength
-        self.ipadapter_image = ipadapter_image
-        self.ipadapter_strength = ipadapter_strength
-        self.guidance_scale = guidance_scale
+        self.true_cfg_scale = true_cfg_scale
 
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Rerolls last Flux gen"""
+        """Rerolls last Qwen Image gen"""
         if await self.discord_client.is_room_in_queue(interaction.user.id):
-            flux_request = FluxGen(self.discord_client,
-                                   self.prompt,
-                                   self.channel,
-                                   interaction.user,
-                                   width=self.width,
-                                   height=self.height,
-                                   batch_size=self.batch_size,
-                                   lora_name=self.lora_name,
-                                   i2i_image=self.i2i_image,
-                                   strength=self.strength,
-                                   ipadapter_image=self.ipadapter_image,
-                                   ipadapter_strength=self.ipadapter_strength,
-                                   guidance_scale=self.guidance_scale,
-                                   )
+            qwen_image_request = QwenImageGen(self.discord_client,
+                                              self.prompt,
+                                              self.channel,
+                                              interaction.user,
+                                              width=self.width,
+                                              height=self.height,
+                                              batch_size=self.batch_size,
+                                              lora_name=self.lora_name,
+                                              i2i_image=self.i2i_image,
+                                              strength=self.strength,
+                                              negative_prompt=self.negative_prompt,
+                                              true_cfg_scale=self.true_cfg_scale,
+                                              )
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
                 ephemeral=True
             )
-            flux_queuelogger = logger.bind(user=interaction.user.name, prompt=self.prompt)
-            flux_queuelogger.info("Flux Queued")
+            qwen_image_queuelogger = logger.bind(user=interaction.user.name, prompt=self.prompt)
+            qwen_image_queuelogger.info("Qwen Image Queued")
             self.discord_client.request_queue_concurrency_list[interaction.user.id] += 1
-            await self.discord_client.request_queue.put(flux_request)
+            await self.discord_client.request_queue.put(qwen_image_request)
         else:
             await interaction.response.send_message(
                 "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
@@ -384,7 +363,7 @@ class FluxButtons(discord.ui.View):
 
     @discord.ui.button(label='Mail', emoji="✉", style=discord.ButtonStyle.grey)
     async def dmimage(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """DMs Flux Image"""
+        """DMs Qwen Image Image"""
         await interaction.response.send_message("DM'ing image...", ephemeral=True, delete_after=5)
         sanitized_prompt = re.sub(r'[^\w\s\-.]', '', self.prompt)[:100]
         files = []
@@ -395,7 +374,7 @@ class FluxButtons(discord.ui.View):
         dm_channel = await interaction.user.create_dm()
         await dm_channel.send(content=self.prompt, files=files)
         image_dm_logger = logger.bind(user=interaction.user.name, userid=interaction.user.id)
-        image_dm_logger.success("Flux DM successful")
+        image_dm_logger.success("Qwen Image DM successful")
 
     @discord.ui.button(label='Delete', emoji="❌", style=discord.ButtonStyle.grey)
     async def delete_message(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -404,68 +383,66 @@ class FluxButtons(discord.ui.View):
             await interaction.message.delete()
         await interaction.response.send_message("Image deleted.", ephemeral=True, delete_after=5)
         speak_delete_logger = logger.bind(user=interaction.user.name, userid=interaction.user.id)
-        speak_delete_logger.info("Flux Delete")
+        speak_delete_logger.info("Qwen Image Delete")
 
-class FluxEnhancedButtons(FluxButtons):
-    """Class for the prompt enhanced ui buttons on /flux_gen"""
+class QwenImageEnhancedButtons(QwenImageButtons):
+    """Class for the prompt enhanced ui buttons on /qwen_image_gen"""
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Rerolls last flux enhanced gen"""
+        """Rerolls last qwen image enhanced gen"""
         if await self.discord_client.is_room_in_queue(interaction.user.id):
-            flux_request = FluxGenEnhanced(self.discord_client,
-                                           self.prompt,
-                                           self.channel,
-                                           interaction.user,
-                                           width=self.width,
-                                           height=self.height,
-                                           batch_size=self.batch_size,
-                                           lora_name=self.lora_name,
-                                           i2i_image=self.i2i_image,
-                                           strength=self.strength,
-                                           ipadapter_image=self.ipadapter_image,
-                                           ipadapter_strength=self.ipadapter_strength,
-                                           guidance_scale=self.guidance_scale,
-                                           )
+            qwen_image_request = QwenImageGenEnhanced(self.discord_client,
+                                                      self.prompt,
+                                                      self.channel,
+                                                      interaction.user,
+                                                      width=self.width,
+                                                      height=self.height,
+                                                      batch_size=self.batch_size,
+                                                      lora_name=self.lora_name,
+                                                      i2i_image=self.i2i_image,
+                                                      strength=self.strength,
+                                                      negative_prompt=self.negative_prompt,
+                                                      true_cfg_scale=self.true_cfg_scale,
+                                                      )
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
                 ephemeral=True
             )
-            flux_queuelogger = logger.bind(user=interaction.user.name, prompt=self.prompt)
-            flux_queuelogger.info("Flux Queued")
+            qwen_image_queuelogger = logger.bind(user=interaction.user.name, prompt=self.prompt)
+            qwen_image_queuelogger.info("Qwen Image Queued")
             self.discord_client.request_queue_concurrency_list[interaction.user.id] += 1
-            await self.discord_client.request_queue.put(flux_request)
+            await self.discord_client.request_queue.put(qwen_image_request)
         else:
             await interaction.response.send_message(
                 "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
             )
 
-class FluxKontextButtons(FluxButtons):
-    """Class for the Flux Kontext buttons"""
+class QwenImageEditButtons(QwenImageButtons):
+    """Class for the Qwen Image Edit buttons"""
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Rerolls last Flux gen"""
+        """Rerolls last Qwen Image Edit gen"""
         if await self.discord_client.is_room_in_queue(interaction.user.id):
-            flux_request = FluxKontextGen(self.discord_client,
-                                          self.prompt,
-                                          self.channel,
-                                          interaction.user,
-                                          width=self.width,
-                                          height=self.height,
-                                          batch_size=self.batch_size,
-                                          lora_name=self.lora_name,
-                                          i2i_image=self.i2i_image,
-                                          strength=self.strength,
-                                          ipadapter_image=self.ipadapter_image,
-                                          ipadapter_strength=self.ipadapter_strength,
-                                          guidance_scale=self.guidance_scale)
+            qwen_image_edit_request = QwenImageEditGen(self.discord_client,
+                                                       self.prompt,
+                                                       self.channel,
+                                                       interaction.user,
+                                                       width=self.width,
+                                                       height=self.height,
+                                                       batch_size=self.batch_size,
+                                                       lora_name=self.lora_name,
+                                                       i2i_image=self.i2i_image,
+                                                       strength=self.strength,
+                                                       negative_prompt=self.negative_prompt,
+                                                       true_cfg_scale=self.true_cfg_scale)
             await interaction.response.send_message(
                 f"Rerolling: {self.discord_client.request_queue.qsize()} requests in queue ahead of you.",
                 ephemeral=True
             )
-            flux_queuelogger = logger.bind(user=interaction.user.name, prompt=self.prompt)
-            flux_queuelogger.info("Flux Queued")
+            qwen_image_edit_queuelogger = logger.bind(user=interaction.user.name, prompt=self.prompt)
+            qwen_image_edit_queuelogger.info("Qwen Image Edit Queued")
             self.discord_client.request_queue_concurrency_list[interaction.user.id] += 1
-            await self.discord_client.request_queue.put(flux_request)
+            await self.discord_client.request_queue.put(qwen_image_edit_request)
         else:
             await interaction.response.send_message(
                 "Queue limit reached, please wait until your current gen or gens finish", ephemeral=True
